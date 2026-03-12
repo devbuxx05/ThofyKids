@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply font-body bg-cream text-slate-brand antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  h1, h2, h3 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 
+           bg-accent text-white font-body font-semibold tracking-wide text-sm uppercase
+           rounded-full transition-all duration-200 hover:bg-accent-dark hover:shadow-lg 
+           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3
+           border-2 border-accent text-accent font-body font-semibold tracking-wide text-sm uppercase
+           rounded-full transition-all duration-200 hover:bg-accent hover:text-white
+           active:scale-95;
+  }
+
+  .btn-whatsapp {
+    @apply inline-flex items-center justify-center gap-2 px-8 py-4
+           bg-[#25D366] text-white font-body font-bold tracking-wide text-base
+           rounded-full transition-all duration-200 hover:bg-[#1ebe5a] hover:shadow-xl
+           active:scale-95;
+  }
+
+  .card {
+    @apply bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300;
+  }
+
+  .input-field {
+    @apply w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm
+           focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent
+           transition-all duration-150 bg-white;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .skeleton {
+    @apply bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 
+           bg-[length:400%_100%] animate-shimmer rounded;
+  }
+
+  .section-title {
+    @apply font-display text-3xl md:text-4xl text-slate-brand leading-tight;
+  }
+
+  .section-subtitle {
+    @apply text-gray-500 text-base mt-2 font-body;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #FAF7F3; }
+::-webkit-scrollbar-thumb { background: #C98B8B; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #A06060; }
+
+/* Cart slide-in overlay */
+.cart-backdrop {
+  background: rgba(61, 53, 53, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+/* Admin sidebar styles */
+.admin-sidebar-link {
+  @apply flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
+         transition-all duration-150 text-gray-500 hover:text-slate-brand hover:bg-accent/10;
+}
+
+.admin-sidebar-link.active {
+  @apply bg-accent/15 text-accent font-semibold;
+}
