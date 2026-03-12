@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { FiShoppingBag, FiMenu, FiX } from 'react-icons/fi'
 import { useCart } from '../../context/CartContext'
@@ -6,6 +6,13 @@ import { useCart } from '../../context/CartContext'
 export default function Header() {
     const { totalItems, openCart } = useCart()
     const [menuOpen, setMenuOpen] = useState(false)
+    const [scrolled, setScrolled] = useState(false)
+
+    useEffect(() => {
+        const onScroll = () => setScrolled(window.scrollY > 8)
+        window.addEventListener('scroll', onScroll, { passive: true })
+        return () => window.removeEventListener('scroll', onScroll)
+    }, [])
 
     const navLinks = [
         { to: '/', label: 'Inicio' },
@@ -14,16 +21,17 @@ export default function Header() {
     ]
 
     return (
-        <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm">
+        <header
+            className={`sticky top-0 z-50 bg-bg border-b border-border transition-shadow duration-200 ${
+                scrolled ? 'shadow-lg shadow-black/20' : ''
+            }`}
+        >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
-                    {/* Logo */}
+                    {/* Logo — Thofy Kids con T o punto en amarillo */}
                     <Link to="/" className="flex items-center gap-2 group">
-                        <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center shrink-0">
-                            <span className="text-white font-display font-bold text-sm">TK</span>
-                        </div>
-                        <span className="font-display text-xl font-bold text-slate-brand tracking-tight group-hover:text-accent transition-colors">
-                            Thofy Kids
+                        <span className="font-display text-xl font-bold text-text-primary tracking-tight">
+                            <span className="text-accent">T</span>hofy Kids
                         </span>
                     </Link>
 
@@ -35,9 +43,10 @@ export default function Header() {
                                 to={l.to}
                                 end={l.to === '/'}
                                 className={({ isActive }) =>
-                                    `px-4 py-2 rounded-full text-sm font-medium transition-all duration-150 ${isActive
-                                        ? 'bg-accent/10 text-accent'
-                                        : 'text-gray-600 hover:text-accent hover:bg-accent/5'
+                                    `px-4 py-2 rounded-[6px] text-sm font-medium transition-all duration-hover ${
+                                        isActive
+                                            ? 'text-accent'
+                                            : 'text-text-muted hover:text-accent'
                                     }`
                                 }
                             >
@@ -48,24 +57,22 @@ export default function Header() {
 
                     {/* Right side */}
                     <div className="flex items-center gap-3">
-                        {/* Cart button */}
                         <button
                             id="cart-btn"
                             onClick={openCart}
-                            className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-accent/10 transition-colors"
+                            className="relative flex items-center justify-center w-10 h-10 rounded-[6px] text-text-primary hover:text-accent transition-colors duration-hover"
                             aria-label="Abrir carrito"
                         >
-                            <FiShoppingBag className="w-5 h-5 text-slate-brand" />
+                            <FiShoppingBag className="w-5 h-5" />
                             {totalItems > 0 && (
-                                <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-accent text-white text-xs font-bold rounded-full flex items-center justify-center">
+                                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-accent text-black text-xs font-bold rounded-full flex items-center justify-center">
                                     {totalItems > 9 ? '9+' : totalItems}
                                 </span>
                             )}
                         </button>
 
-                        {/* Mobile menu */}
                         <button
-                            className="md:hidden w-10 h-10 flex items-center justify-center rounded-full hover:bg-accent/10"
+                            className="md:hidden w-10 h-10 flex items-center justify-center rounded-[6px] text-text-primary hover:text-accent transition-colors"
                             onClick={() => setMenuOpen(!menuOpen)}
                             aria-label="Menú"
                         >
@@ -75,9 +82,8 @@ export default function Header() {
                 </div>
             </div>
 
-            {/* Mobile menu dropdown */}
             {menuOpen && (
-                <div className="md:hidden border-t border-cream-dark bg-white animate-fadeIn">
+                <div className="md:hidden border-t border-border bg-bg animate-fadeIn">
                     <nav className="flex flex-col px-4 py-3 gap-1">
                         {navLinks.map((l) => (
                             <NavLink
@@ -86,7 +92,8 @@ export default function Header() {
                                 end={l.to === '/'}
                                 onClick={() => setMenuOpen(false)}
                                 className={({ isActive }) =>
-                                    `px-4 py-3 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-accent/10 text-accent' : 'text-gray-600 hover:text-accent'
+                                    `px-4 py-3 rounded-[6px] text-sm font-medium transition-colors ${
+                                        isActive ? 'text-accent' : 'text-text-muted hover:text-accent'
                                     }`
                                 }
                             >

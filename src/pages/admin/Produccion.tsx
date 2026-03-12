@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { FiPlus, FiEye, FiChevronDown, FiX, FiDollarSign } from 'react-icons/fi'
+import { FiPlus, FiEye, FiChevronDown, FiDollarSign } from 'react-icons/fi'
+import AdminModal from '../../components/admin/AdminModal'
 import { useProducciones, useCostureros, useModelosAdmin } from '../../hooks/useSupabase'
 import { supabase } from '../../lib/supabase'
 import type { EstadoProduccion, TipoPago, ProduccionConDeuda, PagoProduccion } from '../../types'
@@ -8,20 +9,20 @@ const ESTADOS: EstadoProduccion[] = ['PENDIENTE', 'EN_PRODUCCION', 'TERMINADO', 
 const TIPOS_PAGO: TipoPago[] = ['EFECTIVO', 'YAPE', 'TRANSFERENCIA', 'DEPOSITO']
 
 const estadoConfig: Record<string, { label: string; color: string }> = {
-    PENDIENTE: { label: 'Pendiente', color: 'bg-yellow-100 text-yellow-700' },
-    EN_PRODUCCION: { label: 'En Producción', color: 'bg-blue-100 text-blue-700' },
-    TERMINADO: { label: 'Terminado', color: 'bg-purple-100 text-purple-700' },
-    PAGADO: { label: 'Pagado', color: 'bg-green-100 text-green-700' },
+    PENDIENTE: { label: 'Pendiente', color: 'bg-text-muted/20 text-text-muted' },
+    EN_PRODUCCION: { label: 'En Producción', color: 'bg-blue-500/20 text-blue-400' },
+    TERMINADO: { label: 'Terminado', color: 'bg-green-500/20 text-green-400' },
+    PAGADO: { label: 'Pagado', color: 'bg-accent/20 text-accent' },
 }
 
 const tipoBadge: Record<string, string> = {
-    EFECTIVO: 'bg-green-100 text-green-700',
-    YAPE: 'bg-purple-100 text-purple-700',
-    TRANSFERENCIA: 'bg-blue-100 text-blue-700',
-    DEPOSITO: 'bg-orange-100 text-orange-700',
+    EFECTIVO: 'bg-green-500/20 text-green-400',
+    YAPE: 'bg-purple-500/20 text-purple-400',
+    TRANSFERENCIA: 'bg-blue-500/20 text-blue-400',
+    DEPOSITO: 'bg-orange-500/20 text-orange-400',
 }
 
-type Mode = 'list' | 'detail' | 'create'
+type Mode = 'list' | 'detail'
 
 const emptyProd = {
     id_modelo: '',
@@ -39,6 +40,7 @@ const emptyProd = {
 
 export default function Produccion() {
     const [mode, setMode] = useState<Mode>('list')
+    const [showCreateModal, setShowCreateModal] = useState(false)
     const [selected, setSelected] = useState<ProduccionConDeuda | null>(null)
     const [filtroEstado, setFiltroEstado] = useState('')
     const [filtroCosturero, setFiltroCosturero] = useState<number | undefined>()
@@ -85,7 +87,7 @@ export default function Produccion() {
         })
         setSaving(false)
         if (error) { setFormError(error.message); return }
-        setMode('list')
+        setShowCreateModal(false)
         setForm(emptyProd)
         refetch()
     }
@@ -148,10 +150,10 @@ export default function Produccion() {
         <div className="space-y-6 animate-fadeIn">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="font-display text-2xl font-bold text-slate-brand">Producción</h1>
-                    <p className="text-gray-400 text-sm mt-1">Seguimiento de órdenes de producción</p>
+                    <h1 className="font-display text-2xl font-bold text-text-primary">Producción</h1>
+                    <p className="text-text-muted text-sm mt-1">Seguimiento de órdenes de producción</p>
                 </div>
-                <button onClick={() => setMode('create')} className="btn-primary"><FiPlus className="w-4 h-4" /> Nueva Producción</button>
+                <button onClick={() => setShowCreateModal(true)} className="btn-primary"><FiPlus className="w-4 h-4" /> Nueva Producción</button>
             </div>
 
             {/* Filters */}
@@ -166,13 +168,13 @@ export default function Produccion() {
                 </select>
             </div>
 
-            {error && <p className="text-red-400 text-sm">{error}</p>}
+            {error && <p className="text-danger text-sm">{error}</p>}
 
             <div className="card overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="bg-gray-50 text-xs text-gray-400 uppercase tracking-wider">
+                            <tr className="bg-bg text-xs text-text-muted uppercase tracking-wider">
                                 <th className="px-6 py-3 text-left">Modelo</th>
                                 <th className="px-6 py-3 text-left">Costurero</th>
                                 <th className="px-6 py-3 text-left">Fecha Inicio</th>
@@ -183,19 +185,19 @@ export default function Produccion() {
                                 <th className="px-6 py-3 text-right">Ver</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
+                        <tbody className="divide-y divide-border">
                             {loading ? (
                                 Array.from({ length: 5 }).map((_, i) => <tr key={i}>{Array.from({ length: 8 }).map((_, j) => <td key={j} className="px-6 py-4"><div className="skeleton h-4 w-16 rounded" /></td>)}</tr>)
                             ) : producciones.length === 0 ? (
-                                <tr><td colSpan={8} className="px-6 py-8 text-center text-gray-400">No hay producciones registradas</td></tr>
+                                <tr><td colSpan={8} className="px-6 py-8 text-center text-text-muted">No hay producciones registradas</td></tr>
                             ) : producciones.map((p) => {
                                 const conf = estadoConfig[p.estado]
                                 return (
-                                    <tr key={p.id_produccion} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-4 font-medium text-slate-brand whitespace-nowrap">{p.modelo?.nombre_modelo ?? `#${p.id_modelo}`}</td>
-                                        <td className="px-6 py-4 text-gray-600">{p.costurero?.nombre ?? '—'}</td>
-                                        <td className="px-6 py-4 text-gray-500 whitespace-nowrap">{new Date(p.fecha_inicio).toLocaleDateString('es-PE')}</td>
-                                        <td className="px-6 py-4 text-center text-gray-600">{p.cantidad_prendas}</td>
+                                    <tr key={p.id_produccion} className="hover:bg-[#1F1F1F] transition-colors">
+                                        <td className="px-6 py-4 font-medium text-text-primary whitespace-nowrap">{p.modelo?.nombre_modelo ?? `#${p.id_modelo}`}</td>
+                                        <td className="px-6 py-4 text-text-muted">{p.costurero?.nombre ?? '—'}</td>
+                                        <td className="px-6 py-4 text-text-muted whitespace-nowrap">{new Date(p.fecha_inicio).toLocaleDateString('es-PE')}</td>
+                                        <td className="px-6 py-4 text-center text-text-muted">{p.cantidad_prendas}</td>
                                         <td className="px-6 py-4">
                                             <div className="relative">
                                                 <select
@@ -209,10 +211,10 @@ export default function Produccion() {
                                                 <FiChevronDown className="absolute right-1 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-right font-medium">S/. {p.total_produccion.toFixed(2)}</td>
-                                        <td className={`px-6 py-4 text-right font-bold ${p.deuda > 0 ? 'text-red-500' : 'text-green-500'}`}>S/. {p.deuda.toFixed(2)}</td>
+                                        <td className="px-6 py-4 text-right font-medium font-mono text-text-primary">S/. {p.total_produccion.toFixed(2)}</td>
+                                        <td className={`px-6 py-4 text-right font-bold font-mono ${p.deuda > 0 ? 'text-danger' : 'text-success'}`}>S/. {p.deuda.toFixed(2)}</td>
                                         <td className="px-6 py-4 text-right">
-                                            <button onClick={() => handleView(p)} className="p-1.5 text-gray-400 hover:text-accent hover:bg-accent/10 rounded-lg transition-colors">
+                                            <button onClick={() => handleView(p)} className="p-1.5 text-text-muted hover:text-accent hover:bg-accent/10 rounded-lg transition-colors">
                                                 <FiEye className="w-4 h-4" />
                                             </button>
                                         </td>
@@ -223,23 +225,26 @@ export default function Produccion() {
                     </table>
                 </div>
             </div>
-        </div>
-    )
 
-    // ── Create view ──────────────────────────────────────────
-    if (mode === 'create') return (
-        <div className="max-w-2xl animate-fadeIn">
-            <div className="flex items-center gap-3 mb-6">
-                <button onClick={() => setMode('list')} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Volver">
-                    <FiChevronDown className="w-5 h-5 transform rotate-90" />
-                </button>
-                <h1 className="font-display text-2xl font-bold text-slate-brand">Nueva Producción</h1>
-            </div>
-
-            <div className="card p-6 space-y-5">
+            {/* Modal Nueva Producción */}
+            <AdminModal
+                isOpen={showCreateModal}
+                onClose={() => { setShowCreateModal(false); setForm(emptyProd); setFormError('') }}
+                title="Nueva Producción"
+                maxWidth="lg"
+                footer={
+                    <>
+                        <button onClick={() => { setShowCreateModal(false); setForm(emptyProd) }} className="btn-secondary text-sm py-2">
+                            Cancelar
+                        </button>
+                        <button onClick={handleCreate} disabled={saving} className="btn-primary text-sm py-2 flex items-center gap-2">
+                            {saving ? <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : 'Crear Producción'}
+                        </button>
+                    </>
+                }
+            >
                 {formError && (
-                    <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3 flex items-start gap-3">
-                        <FiX className="w-4 h-4 shrink-0 mt-0.5" />
+                    <div className="bg-danger/10 border border-danger/30 text-danger text-sm rounded-[6px] px-4 py-3">
                         <p>{formError}</p>
                     </div>
                 )}
@@ -247,16 +252,16 @@ export default function Produccion() {
                 {/* Selects */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Modelo *</label>
-                        <select value={form.id_modelo} onChange={(e) => setForm((f) => ({ ...f, id_modelo: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
+                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Modelo *</label>
+                        <select value={form.id_modelo} onChange={(e) => setForm((f) => ({ ...f, id_modelo: e.target.value }))} className="input-field">
                             <option value="">Seleccionar modelo</option>
                             {modelos.map((m) => <option key={m.id_modelo} value={m.id_modelo}>{m.nombre_modelo}</option>)}
                         </select>
                     </div>
 
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Costurero *</label>
-                        <select value={form.id_costurero} onChange={(e) => setForm((f) => ({ ...f, id_costurero: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
+                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Costurero *</label>
+                        <select value={form.id_costurero} onChange={(e) => setForm((f) => ({ ...f, id_costurero: e.target.value }))} className="input-field">
                             <option value="">Seleccionar costurero</option>
                             {costureros.map((c) => <option key={c.id_costurero} value={c.id_costurero}>{c.nombre}</option>)}
                         </select>
@@ -270,8 +275,8 @@ export default function Produccion() {
                         { field: 'fecha_termino', label: 'Fecha Término', type: 'date' },
                     ].map(({ field, label, type }) => (
                         <div key={field}>
-                            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">{label}</label>
-                            <input type={type} value={(form as Record<string, unknown>)[field] as string} onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all" />
+                            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{label}</label>
+                            <input type={type} value={(form as Record<string, unknown>)[field] as string} onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))} className="input-field" />
                         </div>
                     ))}
                 </div>
@@ -285,44 +290,34 @@ export default function Produccion() {
                         { field: 'cantidad_falladas', label: 'Cantidad Falladas', type: 'number' },
                     ].map(({ field, label, type }) => (
                         <div key={field}>
-                            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">{label}</label>
-                            <input type={type} value={(form as Record<string, unknown>)[field] as string} onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all" min="0" step={field === 'precio_costura' ? '0.01' : '1'} />
+                            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{label}</label>
+                            <input type={type} value={(form as Record<string, unknown>)[field] as string} onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))} className="input-field" min="0" step={field === 'precio_costura' ? '0.01' : '1'} />
                         </div>
                     ))}
                 </div>
 
                 {/* Estado */}
                 <div>
-                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Estado Inicial</label>
-                    <select value={form.estado} onChange={(e) => setForm((f) => ({ ...f, estado: e.target.value as EstadoProduccion }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
+                    <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Estado Inicial</label>
+                    <select value={form.estado} onChange={(e) => setForm((f) => ({ ...f, estado: e.target.value as EstadoProduccion }))} className="input-field">
                         {ESTADOS.map((s) => <option key={s} value={s}>{estadoConfig[s].label}</option>)}
                     </select>
                 </div>
 
                 {/* Observación */}
                 <div>
-                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Observaciones</label>
-                    <textarea value={form.observacion} onChange={(e) => setForm((f) => ({ ...f, observacion: e.target.value }))} rows={3} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all resize-none" placeholder="Notas adicionales..." />
+                    <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Observaciones</label>
+                    <textarea value={form.observacion} onChange={(e) => setForm((f) => ({ ...f, observacion: e.target.value }))} rows={3} className="input-field resize-none" placeholder="Notas adicionales..." />
                 </div>
 
                 {/* Summary */}
                 {form.cantidad_prendas && form.precio_costura && (
-                    <div className="bg-accent/5 border border-accent/20 rounded-lg p-4 flex items-center justify-between">
-                        <span className="text-sm font-semibold text-gray-600">Total estimado:</span>
-                        <span className="text-lg font-bold text-accent">S/. {(Number(form.cantidad_prendas) * Number(form.precio_costura)).toFixed(2)}</span>
+                    <div className="bg-accent/10 border border-accent/20 rounded-[6px] p-4 flex items-center justify-between">
+                        <span className="text-sm font-semibold text-text-muted">Total estimado:</span>
+                        <span className="text-lg font-bold font-mono text-accent">S/. {(Number(form.cantidad_prendas) * Number(form.precio_costura)).toFixed(2)}</span>
                     </div>
                 )}
-
-                {/* Actions */}
-                <div className="flex justify-end gap-3 pt-2">
-                    <button onClick={() => setMode('list')} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-                        Cancelar
-                    </button>
-                    <button onClick={handleCreate} disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-accent/90 disabled:opacity-50 rounded-lg transition-colors flex items-center gap-2">
-                        {saving ? <span className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" /> : 'Crear Producción'}
-                    </button>
-                </div>
-            </div>
+            </AdminModal>
         </div>
     )
 
@@ -332,15 +327,15 @@ export default function Produccion() {
         return (
             <div className="space-y-6 animate-fadeIn">
                 <div className="flex items-center gap-3 flex-wrap">
-                    <button onClick={() => { setMode('list'); refetch() }} className="text-gray-400 hover:text-gray-600 text-sm">← Volver</button>
-                    <h1 className="font-display text-2xl font-bold text-slate-brand">{selected.modelo?.nombre_modelo ?? `Producción #${selected.id_produccion}`}</h1>
+                    <button onClick={() => { setMode('list'); refetch() }} className="text-text-muted hover:text-text-primary text-sm">← Volver</button>
+                    <h1 className="font-display text-2xl font-bold text-text-primary">{selected.modelo?.nombre_modelo ?? `Producción #${selected.id_produccion}`}</h1>
                     <span className={`badge ${conf.color}`}>{conf.label}</span>
                 </div>
 
                 <div className="grid lg:grid-cols-2 gap-6">
                     {/* Info card */}
                     <div className="card p-6 space-y-3">
-                        <h2 className="font-display font-semibold text-slate-brand mb-4">Información</h2>
+                        <h2 className="font-display font-semibold text-text-primary mb-4">Información</h2>
                         {[
                             { label: 'Costurero', value: selected.costurero?.nombre ?? '—' },
                             { label: 'Fecha Inicio', value: new Date(selected.fecha_inicio).toLocaleDateString('es-PE') },
@@ -350,16 +345,16 @@ export default function Produccion() {
                             { label: 'Entregadas', value: selected.cantidad_entregada?.toString() ?? '—' },
                             { label: 'Falladas', value: selected.cantidad_falladas?.toString() ?? '—' },
                         ].map(({ label, value }) => (
-                            <div key={label} className="flex justify-between text-sm border-b border-gray-50 pb-2">
-                                <span className="text-gray-400">{label}</span>
-                                <span className="font-medium text-slate-brand">{value}</span>
+                            <div key={label} className="flex justify-between text-sm border-b border-border pb-2">
+                                <span className="text-text-muted">{label}</span>
+                                <span className="font-medium text-text-primary">{value}</span>
                             </div>
                         ))}
                         {selected.observacion && (
-                            <div className="bg-cream rounded-lg p-3 text-sm text-gray-600">{selected.observacion}</div>
+                            <div className="bg-surface rounded-lg p-3 text-sm text-text-muted">{selected.observacion}</div>
                         )}
                         <div>
-                            <label className="block text-xs font-semibold text-gray-400 mb-1">Cambiar Estado</label>
+                            <label className="block text-xs font-semibold text-text-muted mb-1">Cambiar Estado</label>
                             <select value={selected.estado} onChange={(e) => handleChangeEstado(selected, e.target.value as EstadoProduccion)} className="input-field">
                                 {ESTADOS.map((s) => <option key={s} value={s}>{estadoConfig[s].label}</option>)}
                             </select>
@@ -368,14 +363,14 @@ export default function Produccion() {
 
                     {/* Financial card */}
                     <div className="card p-6">
-                        <h2 className="font-display font-semibold text-slate-brand mb-4">Resumen Financiero</h2>
+                        <h2 className="font-display font-semibold text-text-primary mb-4">Resumen Financiero</h2>
                         <div className="space-y-2 mb-6">
-                            <div className="flex justify-between text-sm"><span className="text-gray-400">Total producción</span><span className="font-bold">S/. {selected.total_produccion.toFixed(2)}</span></div>
-                            <div className="flex justify-between text-sm"><span className="text-gray-400">Total pagado</span><span className="font-bold text-green-600">S/. {selected.total_pagado.toFixed(2)}</span></div>
-                            <div className="h-px bg-gray-100 my-2" />
+                            <div className="flex justify-between text-sm"><span className="text-text-muted">Total producción</span><span className="font-bold">S/. {selected.total_produccion.toFixed(2)}</span></div>
+                            <div className="flex justify-between text-sm"><span className="text-text-muted">Total pagado</span><span className="font-bold text-success">S/. {selected.total_pagado.toFixed(2)}</span></div>
+                            <div className="h-px bg-border my-2" />
                             <div className="flex justify-between text-base font-bold">
                                 <span>Deuda pendiente</span>
-                                <span className={selected.deuda > 0 ? 'text-red-500' : 'text-green-500'}>S/. {selected.deuda.toFixed(2)}</span>
+                                <span className={selected.deuda > 0 ? 'text-danger' : 'text-success'}>S/. {selected.deuda.toFixed(2)}</span>
                             </div>
                         </div>
                         {selected.deuda > 0 && (
@@ -388,8 +383,8 @@ export default function Produccion() {
 
                 {/* Payment history */}
                 <div className="card overflow-hidden">
-                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                        <h2 className="font-display font-semibold text-slate-brand">Historial de Pagos</h2>
+                    <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+                        <h2 className="font-display font-semibold text-text-primary">Historial de Pagos</h2>
                         {selected.deuda > 0 && (
                             <button onClick={() => setShowPagoModal(true)} className="text-accent text-sm font-medium hover:underline">+ Nuevo Pago</button>
                         )}
@@ -397,22 +392,22 @@ export default function Produccion() {
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="bg-gray-50 text-xs text-gray-400 uppercase tracking-wider">
+                                <tr className="bg-bg text-xs text-text-muted uppercase tracking-wider">
                                     <th className="px-6 py-3 text-left">Fecha</th>
                                     <th className="px-6 py-3 text-left">Tipo</th>
                                     <th className="px-6 py-3 text-right">Monto</th>
                                     <th className="px-6 py-3 text-left">Detalle</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-50">
+                            <tbody className="divide-y divide-border">
                                 {(selected.pagos as PagoProduccion[] | undefined)?.length === 0 || !selected.pagos ? (
-                                    <tr><td colSpan={4} className="px-6 py-6 text-center text-gray-400">No hay pagos registrados</td></tr>
+                                    <tr><td colSpan={4} className="px-6 py-6 text-center text-text-muted">No hay pagos registrados</td></tr>
                                 ) : (selected.pagos as PagoProduccion[]).map((pago) => (
-                                    <tr key={pago.id_pago} className="hover:bg-gray-50">
-                                        <td className="px-6 py-3 text-gray-600">{new Date(pago.fecha_pago).toLocaleDateString('es-PE')}</td>
+                                    <tr key={pago.id_pago} className="hover:bg-[#1F1F1F]">
+                                        <td className="px-6 py-3 text-text-muted">{new Date(pago.fecha_pago).toLocaleDateString('es-PE')}</td>
                                         <td className="px-6 py-3"><span className={`badge ${tipoBadge[pago.tipo_pago]}`}>{pago.tipo_pago}</span></td>
-                                        <td className="px-6 py-3 text-right font-bold text-green-600">S/. {pago.monto.toFixed(2)}</td>
-                                        <td className="px-6 py-3 text-gray-500 text-xs">{pago.detalle ?? '—'}</td>
+                                        <td className="px-6 py-3 text-right font-bold text-success">S/. {pago.monto.toFixed(2)}</td>
+                                        <td className="px-6 py-3 text-text-muted text-xs">{pago.detalle ?? '—'}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -420,63 +415,48 @@ export default function Produccion() {
                     </div>
                 </div>
 
-                {/* Payment modal */}
-                {showPagoModal && (
-                    <>
-                        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={() => setShowPagoModal(false)} />
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[calc(100vh-2rem)] flex flex-col animate-fadeIn">
-                                {/* Header */}
-                                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-                                    <h3 className="font-display font-semibold text-slate-brand">Registrar Pago</h3>
-                                    <button onClick={() => setShowPagoModal(false)} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                                        <FiX className="w-5 h-5" />
-                                    </button>
-                                </div>
+                <AdminModal
+                    isOpen={showPagoModal}
+                    onClose={() => setShowPagoModal(false)}
+                    title="Registrar Pago"
+                    footer={
+                        <>
+                            <button onClick={() => setShowPagoModal(false)} className="btn-secondary text-sm py-2">
+                                Cancelar
+                            </button>
+                            <button onClick={handleRegisterPago} disabled={savingPago || !pagoForm.monto} className="btn-primary text-sm py-2 flex items-center gap-2">
+                                {savingPago ? <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : 'Registrar Pago'}
+                            </button>
+                        </>
+                    }
+                >
+                    <div className="bg-accent/10 border border-accent/20 rounded-[6px] p-3 text-sm">
+                        <span className="text-text-muted">Deuda Pendiente: </span>
+                        <span className="font-bold font-mono text-accent text-lg">S/. {selected.deuda.toFixed(2)}</span>
+                    </div>
 
-                                {/* Content */}
-                                <div className="px-6 py-5 overflow-y-auto flex-1 space-y-4">
-                                    <div className="bg-accent/5 border border-accent/20 rounded-lg p-3 text-sm">
-                                        <span className="text-gray-600">Deuda Pendiente: </span>
-                                        <span className="font-bold text-accent text-lg">S/. {selected.deuda.toFixed(2)}</span>
-                                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Tipo de Pago</label>
+                        <select value={pagoForm.tipo_pago} onChange={(e) => setPagoForm((f) => ({ ...f, tipo_pago: e.target.value as TipoPago }))} className="input-field">
+                            {TIPOS_PAGO.map((t) => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                    </div>
 
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Tipo de Pago</label>
-                                        <select value={pagoForm.tipo_pago} onChange={(e) => setPagoForm((f) => ({ ...f, tipo_pago: e.target.value as TipoPago }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
-                                            {TIPOS_PAGO.map((t) => <option key={t} value={t}>{t}</option>)}
-                                        </select>
-                                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Monto (S/.) *</label>
+                        <input type="number" min="0.01" step="0.01" value={pagoForm.monto} onChange={(e) => setPagoForm((f) => ({ ...f, monto: e.target.value }))} className="input-field" placeholder="0.00" />
+                    </div>
 
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Monto (S/.) *</label>
-                                        <input type="number" min="0.01" step="0.01" value={pagoForm.monto} onChange={(e) => setPagoForm((f) => ({ ...f, monto: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all" placeholder="0.00" />
-                                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Fecha Pago</label>
+                        <input type="date" value={pagoForm.fecha_pago} onChange={(e) => setPagoForm((f) => ({ ...f, fecha_pago: e.target.value }))} className="input-field" />
+                    </div>
 
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Fecha Pago</label>
-                                        <input type="date" value={pagoForm.fecha_pago} onChange={(e) => setPagoForm((f) => ({ ...f, fecha_pago: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all" />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Detalle (opcional)</label>
-                                        <input type="text" value={pagoForm.detalle} onChange={(e) => setPagoForm((f) => ({ ...f, detalle: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all" placeholder="Transferencia BCP..." />
-                                    </div>
-                                </div>
-
-                                {/* Footer */}
-                                <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 shrink-0">
-                                    <button onClick={() => setShowPagoModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-                                        Cancelar
-                                    </button>
-                                    <button onClick={handleRegisterPago} disabled={savingPago || !pagoForm.monto} className="px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-accent/90 disabled:opacity-50 rounded-lg transition-colors flex items-center gap-2">
-                                        {savingPago ? <span className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" /> : 'Registrar Pago'}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </>
-                )}
+                    <div>
+                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Detalle (opcional)</label>
+                        <input type="text" value={pagoForm.detalle} onChange={(e) => setPagoForm((f) => ({ ...f, detalle: e.target.value }))} className="input-field" placeholder="Transferencia BCP..." />
+                    </div>
+                </AdminModal>
             </div>
         )
     }

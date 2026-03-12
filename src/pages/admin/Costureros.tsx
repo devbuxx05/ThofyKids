@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { FiPlus, FiEdit2, FiToggleLeft, FiToggleRight, FiX } from 'react-icons/fi'
+import AdminModal from '../../components/admin/AdminModal'
 import { useCostureros } from '../../hooks/useSupabase'
 import { supabase } from '../../lib/supabase'
 import type { Costurero } from '../../types'
@@ -63,8 +64,8 @@ export default function Costureros() {
         <div className="space-y-6 animate-fadeIn">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="font-display text-2xl font-bold text-slate-brand">Costureros</h1>
-                    <p className="text-gray-400 text-sm mt-1">Gestión del equipo de producción</p>
+                    <h1 className="font-display text-2xl font-bold text-text-primary">Costureros</h1>
+                    <p className="text-text-muted text-sm mt-1">Gestión del equipo de producción</p>
                 </div>
                 <button id="create-costurero-btn" onClick={openCreate} className="btn-primary">
                     <FiPlus className="w-4 h-4" /> Nuevo Costurero
@@ -77,7 +78,7 @@ export default function Costureros() {
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="bg-gray-50 text-xs text-gray-400 uppercase tracking-wider">
+                            <tr className="bg-gray-50 text-xs text-text-muted uppercase tracking-wider">
                                 <th className="px-6 py-3 text-left">Nombre</th>
                                 <th className="px-6 py-3 text-left">DNI</th>
                                 <th className="px-6 py-3 text-left">Teléfono</th>
@@ -86,30 +87,30 @@ export default function Costureros() {
                                 <th className="px-6 py-3 text-right">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
+                        <tbody className="divide-y divide-border">
                             {loading ? (
                                 Array.from({ length: 4 }).map((_, i) => (
                                     <tr key={i}>{Array.from({ length: 6 }).map((_, j) => <td key={j} className="px-6 py-4"><div className="skeleton h-4 w-20 rounded" /></td>)}</tr>
                                 ))
                             ) : data.length === 0 ? (
-                                <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-400">No hay costureros registrados</td></tr>
+                                <tr><td colSpan={6} className="px-6 py-8 text-center text-text-muted">No hay costureros registrados</td></tr>
                             ) : data.map((c) => (
-                                <tr key={c.id_costurero} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-6 py-4 font-medium text-slate-brand">{c.nombre}</td>
-                                    <td className="px-6 py-4 text-gray-600">{c.dni}</td>
-                                    <td className="px-6 py-4 text-gray-600">{c.telefono}</td>
-                                    <td className="px-6 py-4 text-gray-600 font-mono text-xs">{c.numero_cuenta}</td>
+                                <tr key={c.id_costurero} className="hover:bg-[#1F1F1F] transition-colors">
+                                    <td className="px-6 py-4 font-medium text-text-primary">{c.nombre}</td>
+                                    <td className="px-6 py-4 text-text-muted">{c.dni}</td>
+                                    <td className="px-6 py-4 text-text-muted">{c.telefono}</td>
+                                    <td className="px-6 py-4 text-text-muted font-mono text-xs">{c.numero_cuenta}</td>
                                     <td className="px-6 py-4 text-center">
-                                        <span className={`badge ${c.activo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                                        <span className={`badge ${c.activo ? 'bg-green-500/20 text-green-400' : 'bg-text-muted/20 text-text-muted'}`}>
                                             {c.activo ? 'Activo' : 'Inactivo'}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center justify-end gap-2">
-                                            <button onClick={() => openEdit(c)} className="p-1.5 text-gray-400 hover:text-accent hover:bg-accent/10 rounded-lg transition-colors" title="Editar">
+                                            <button onClick={() => openEdit(c)} className="p-1.5 text-text-muted hover:text-accent hover:bg-accent/10 rounded-lg transition-colors" title="Editar">
                                                 <FiEdit2 className="w-4 h-4" />
                                             </button>
-                                            <button onClick={() => handleToggle(c)} className={`p-1.5 rounded-lg transition-colors ${c.activo ? 'text-green-400 hover:text-red-400 hover:bg-red-50' : 'text-gray-300 hover:text-green-500 hover:bg-green-50'}`} title={c.activo ? 'Desactivar' : 'Activar'}>
+                                            <button onClick={() => handleToggle(c)} className={`p-1.5 rounded-lg transition-colors ${c.activo ? 'text-green-400 hover:text-danger hover:bg-danger/10' : 'text-text-muted hover:text-success hover:bg-success/10'}`} title={c.activo ? 'Desactivar' : 'Activar'}>
                                                 {c.activo ? <FiToggleRight className="w-4 h-4" /> : <FiToggleLeft className="w-4 h-4" />}
                                             </button>
                                         </div>
@@ -121,26 +122,23 @@ export default function Costureros() {
                 </div>
             </div>
 
-            {/* Modal */}
-            {showModal && (
-                <>
-                    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[calc(100vh-2rem)] flex flex-col animate-fadeIn">
-                            {/* Header */}
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-                                <h2 className="font-display font-semibold text-slate-brand">
-                                    {editId ? 'Editar Costurero' : 'Nuevo Costurero'}
-                                </h2>
-                                <button onClick={() => setShowModal(false)} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                                    <FiX className="w-5 h-5" />
-                                </button>
-                            </div>
-
-                            {/* Content with scroll */}
-                            <div className="px-6 py-5 overflow-y-auto flex-1 space-y-4">
+            <AdminModal
+                isOpen={showModal}
+                onClose={() => setShowModal(false)}
+                title={editId ? 'Editar Costurero' : 'Nuevo Costurero'}
+                footer={
+                    <>
+                        <button onClick={() => setShowModal(false)} className="btn-secondary text-sm py-2">
+                            Cancelar
+                        </button>
+                        <button onClick={handleSave} disabled={saving} className="btn-primary text-sm py-2 flex items-center gap-2">
+                            {saving ? <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : (editId ? 'Guardar Cambios' : 'Crear Costurero')}
+                        </button>
+                    </>
+                }
+            >
                                 {formError && (
-                                    <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3 flex items-start gap-3">
+                                    <div className="bg-danger/10 border border-danger/30 text-danger text-sm rounded-lg px-4 py-3 flex items-start gap-3">
                                         <FiX className="w-4 h-4 shrink-0 mt-0.5" />
                                         <p>{formError}</p>
                                     </div>
@@ -153,31 +151,17 @@ export default function Costureros() {
                                     { field: 'numero_cuenta', label: 'Número de cuenta', type: 'text', placeholder: '0011-0000-00-00000000' },
                                 ].map(({ field, label, type, placeholder }) => (
                                     <div key={field}>
-                                        <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">{label}</label>
+                                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{label}</label>
                                         <input
                                             type={type}
                                             placeholder={placeholder}
                                             value={(form as Record<string, unknown>)[field] as string}
                                             onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))}
-                                            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
+                                            className="input-field"
                                         />
                                     </div>
                                 ))}
-                            </div>
-
-                            {/* Footer */}
-                            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 shrink-0">
-                                <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-                                    Cancelar
-                                </button>
-                                <button onClick={handleSave} disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-accent/90 disabled:opacity-50 rounded-lg transition-colors flex items-center gap-2">
-                                    {saving ? <span className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" /> : (editId ? 'Guardar Cambios' : 'Crear Costurero')}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </>
-            )}
+            </AdminModal>
         </div>
     )
 }

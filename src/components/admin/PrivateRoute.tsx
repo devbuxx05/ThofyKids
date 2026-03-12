@@ -20,8 +20,8 @@ export default function PrivateRoute() {
 
     if (session === undefined) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full animate-spin" />
+            <div className="min-h-screen flex items-center justify-center bg-bg">
+                <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
             </div>
         )
     }

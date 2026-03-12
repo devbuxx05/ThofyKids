@@ -7,22 +7,27 @@ export default {
     theme: {
         extend: {
             colors: {
+                // Thofy Kids dark palette
+                bg: '#0F0F0F',
+                surface: '#1A1A1A',
+                border: '#2A2A2A',
                 accent: {
-                    DEFAULT: '#C98B8B',
-                    light: '#E8BFBF',
-                    dark: '#A06060',
+                    DEFAULT: '#F5C842',
+                    hover: '#E0B030',
                 },
-                cream: {
-                    DEFAULT: '#FAF7F3',
-                    dark: '#F0EAE0',
-                },
-                slate: {
-                    brand: '#3D3535',
-                }
+                'text-primary': '#F5F5F5',
+                'text-muted': '#888888',
+                success: '#25D366',
+                danger: '#E05555',
+                'admin-bg': '#111111',
             },
             fontFamily: {
-                display: ['"Playfair Display"', 'serif'],
-                body: ['Inter', 'sans-serif'],
+                display: ['Syne', 'sans-serif'],
+                body: ['"DM Sans"', 'sans-serif'],
+                mono: ['"DM Mono"', 'monospace'],
+            },
+            borderRadius: {
+                card: '8px',
             },
             keyframes: {
                 fadeIn: {
@@ -36,13 +41,16 @@ export default {
                 shimmer: {
                     '0%': { backgroundPosition: '-200% 0' },
                     '100%': { backgroundPosition: '200% 0' },
-                }
+                },
             },
             animation: {
                 fadeIn: 'fadeIn 0.4s ease-out forwards',
                 slideIn: 'slideIn 0.3s ease-out forwards',
                 shimmer: 'shimmer 1.5s infinite linear',
-            }
+            },
+            transitionDuration: {
+                hover: '200ms',
+            },
         },
     },
     plugins: [],

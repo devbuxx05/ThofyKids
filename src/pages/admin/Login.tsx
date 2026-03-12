@@ -15,9 +15,9 @@ export default function Login() {
         setLoading(true)
         setError('')
 
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
+        const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
 
-        if (error) {
+        if (authError) {
             setError('Credenciales incorrectas. Verifica tu email y contraseña.')
             setLoading(false)
         } else {
@@ -26,27 +26,24 @@ export default function Login() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-brand to-[#6B4848] flex items-center justify-center p-4">
+        <div className="min-h-screen bg-bg flex items-center justify-center p-4">
             <div className="w-full max-w-sm">
-                {/* Logo */}
                 <div className="text-center mb-8">
-                    <div className="w-16 h-16 rounded-full bg-accent mx-auto flex items-center justify-center mb-4 shadow-lg shadow-accent/30">
-                        <span className="text-white font-display font-bold text-2xl">TK</span>
-                    </div>
-                    <h1 className="font-display text-2xl font-bold text-white">Panel Admin</h1>
-                    <p className="text-white/60 text-sm mt-1">Thofy Kids — Acceso Interno</p>
+                    <span className="font-display text-2xl font-bold text-text-primary">
+                        <span className="text-accent">T</span>hofy Kids
+                    </span>
+                    <h1 className="font-display text-xl font-bold text-text-primary mt-4">Panel Admin</h1>
+                    <p className="text-text-muted text-sm mt-1">Acceso Interno</p>
                 </div>
 
-                {/* Card */}
-                <div className="bg-white rounded-2xl shadow-2xl p-8">
+                <div className="bg-surface border border-border rounded-card p-8">
                     <form onSubmit={handleSubmit} className="space-y-5">
-                        {/* Email */}
                         <div>
-                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">
                                 Correo electrónico
                             </label>
                             <div className="relative">
-                                <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-4 h-4" />
                                 <input
                                     id="login-email"
                                     type="email"
@@ -59,13 +56,12 @@ export default function Login() {
                             </div>
                         </div>
 
-                        {/* Password */}
                         <div>
-                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">
                                 Contraseña
                             </label>
                             <div className="relative">
-                                <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-4 h-4" />
                                 <input
                                     id="login-password"
                                     type="password"
@@ -78,15 +74,13 @@ export default function Login() {
                             </div>
                         </div>
 
-                        {/* Error */}
                         {error && (
-                            <div className="flex items-start gap-2 bg-red-50 text-red-500 text-sm rounded-lg px-3 py-2.5">
+                            <div className="flex items-start gap-2 bg-danger/10 border border-danger/30 text-danger text-sm rounded-[6px] px-3 py-2.5">
                                 <FiAlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                                 {error}
                             </div>
                         )}
 
-                        {/* Submit */}
                         <button
                             id="login-submit"
                             type="submit"
@@ -94,7 +88,7 @@ export default function Login() {
                             className="btn-primary w-full"
                         >
                             {loading ? (
-                                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
                             ) : (
                                 'Ingresar'
                             )}
@@ -102,7 +96,7 @@ export default function Login() {
                     </form>
                 </div>
 
-                <p className="text-center text-white/40 text-xs mt-6">
+                <p className="text-center text-text-muted text-xs mt-6">
                     Solo para personal autorizado de Thofy Kids
                 </p>
             </div>

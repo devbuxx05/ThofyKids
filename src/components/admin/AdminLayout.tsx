@@ -23,32 +23,27 @@ export default function AdminLayout() {
         navigate('/admin/login')
     }
 
-    const Sidebar = ({ mobile = false }) => (
+    const Sidebar = ({ mobile = false }: { mobile?: boolean }) => (
         <aside
             className={`${mobile
-                    ? 'fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-white shadow-2xl animate-slideIn'
-                    : 'hidden lg:flex flex-col w-64 shrink-0 bg-white border-r border-gray-100 h-screen sticky top-0'
-                }`}
+                ? 'fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-admin-bg shadow-2xl animate-slideIn'
+                : 'hidden lg:flex flex-col w-64 shrink-0 bg-admin-bg border-r border-border h-screen sticky top-0'
+            }`}
         >
-            {/* Logo */}
-            <div className="px-5 py-5 border-b border-gray-100 flex items-center justify-between">
+            <div className="px-5 py-5 border-b border-border flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center shrink-0">
-                        <span className="text-white font-display font-bold text-sm">TK</span>
-                    </div>
-                    <div>
-                        <p className="font-display font-bold text-slate-brand text-sm leading-none">Thofy Kids</p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">Panel Administrativo</p>
-                    </div>
+                    <span className="font-display font-bold text-text-primary text-sm leading-none">
+                        <span className="text-accent">T</span>hofy Kids
+                    </span>
+                    <p className="text-[10px] text-text-muted mt-0.5 ml-1">Panel Admin</p>
                 </div>
                 {mobile && (
-                    <button onClick={() => setSidebarOpen(false)}>
-                        <FiX className="w-5 h-5 text-gray-400" />
+                    <button onClick={() => setSidebarOpen(false)} className="p-1 text-text-muted hover:text-text-primary">
+                        <FiX className="w-5 h-5" />
                     </button>
                 )}
             </div>
 
-            {/* Nav */}
             <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
                 {navItems.map(({ to, icon: Icon, label }) => (
                     <NavLink
@@ -66,11 +61,10 @@ export default function AdminLayout() {
                 ))}
             </nav>
 
-            {/* Logout */}
-            <div className="px-3 py-4 border-t border-gray-100">
+            <div className="px-3 py-4 border-t border-border">
                 <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-50 transition-all"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-[6px] text-sm font-medium text-danger hover:bg-danger/10 transition-all"
                 >
                     <FiLogOut className="w-4 h-4" />
                     Cerrar Sesión
@@ -80,43 +74,38 @@ export default function AdminLayout() {
     )
 
     return (
-        <div className="min-h-screen bg-gray-50 flex">
-            {/* Desktop sidebar */}
+        <div className="min-h-screen bg-bg flex">
             <Sidebar />
 
-            {/* Mobile sidebar backdrop */}
             {sidebarOpen && (
                 <div
-                    className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+                    className="fixed inset-0 z-40 bg-black/60 lg:hidden"
                     onClick={() => setSidebarOpen(false)}
+                    aria-hidden
                 />
             )}
 
-            {/* Mobile sidebar */}
             {sidebarOpen && <Sidebar mobile />}
 
-            {/* Main */}
             <div className="flex-1 flex flex-col min-w-0">
-                {/* Top bar */}
-                <header className="bg-white border-b border-gray-100 px-4 sm:px-6 h-14 flex items-center gap-4 sticky top-0 z-30">
+                <header className="bg-admin-bg border-b border-border px-4 sm:px-6 h-14 flex items-center gap-4 sticky top-0 z-30">
                     <button
-                        className="lg:hidden p-2 rounded-lg hover:bg-gray-50"
+                        className="lg:hidden p-2 rounded-[6px] text-text-muted hover:text-text-primary hover:bg-surface"
                         onClick={() => setSidebarOpen(true)}
                         aria-label="Abrir menú"
                     >
-                        <FiMenu className="w-5 h-5 text-gray-500" />
+                        <FiMenu className="w-5 h-5" />
                     </button>
                     <div className="flex-1" />
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-[6px] bg-accent/10 flex items-center justify-center">
                             <span className="text-accent font-bold text-xs">A</span>
                         </div>
-                        <span className="text-sm text-gray-600 hidden sm:block">Admin</span>
+                        <span className="text-sm text-text-muted hidden sm:block">Admin</span>
                     </div>
                 </header>
 
-                {/* Content */}
-                <main className="flex-1 p-4 sm:p-6 lg:p-8">
+                <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-bg">
                     <Outlet />
                 </main>
             </div>

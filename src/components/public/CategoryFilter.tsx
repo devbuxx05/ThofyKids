@@ -8,13 +8,14 @@ interface Props {
 
 export default function CategoryFilter({ categorias, selected, onSelect }: Props) {
     return (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
             <button
                 onClick={() => onSelect(null)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-150 ${selected === null
-                        ? 'bg-accent text-white shadow-md'
-                        : 'bg-white text-gray-600 border border-gray-200 hover:border-accent hover:text-accent'
-                    }`}
+                className={`shrink-0 px-4 py-2 rounded-[6px] text-sm font-medium border transition-all duration-hover ${
+                    selected === null
+                        ? 'border-accent text-accent bg-transparent'
+                        : 'border-border text-text-muted bg-transparent hover:border-accent/50 hover:text-accent'
+                }`}
             >
                 Todos
             </button>
@@ -22,10 +23,11 @@ export default function CategoryFilter({ categorias, selected, onSelect }: Props
                 <button
                     key={cat.id_categoria}
                     onClick={() => onSelect(cat.id_categoria)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-150 ${selected === cat.id_categoria
-                            ? 'bg-accent text-white shadow-md'
-                            : 'bg-white text-gray-600 border border-gray-200 hover:border-accent hover:text-accent'
-                        }`}
+                    className={`shrink-0 px-4 py-2 rounded-[6px] text-sm font-medium border transition-all duration-hover ${
+                        selected === cat.id_categoria
+                            ? 'border-accent text-accent bg-transparent'
+                            : 'border-border text-text-muted bg-transparent hover:border-accent/50 hover:text-accent'
+                    }`}
                 >
                     {cat.nombre}
                 </button>

@@ -5,10 +5,10 @@ import { FiFilter } from 'react-icons/fi'
 const TIPOS_PAGO = ['EFECTIVO', 'YAPE', 'TRANSFERENCIA', 'DEPOSITO']
 
 const tipoBadge: Record<string, string> = {
-    EFECTIVO: 'bg-green-100 text-green-700',
-    YAPE: 'bg-purple-100 text-purple-700',
-    TRANSFERENCIA: 'bg-blue-100 text-blue-700',
-    DEPOSITO: 'bg-orange-100 text-orange-700',
+    EFECTIVO: 'bg-green-500/20 text-green-400',
+    YAPE: 'bg-purple-500/20 text-purple-400',
+    TRANSFERENCIA: 'bg-blue-500/20 text-blue-400',
+    DEPOSITO: 'bg-orange-500/20 text-orange-400',
 }
 
 export default function Pagos() {
@@ -30,13 +30,13 @@ export default function Pagos() {
     return (
         <div className="space-y-6 animate-fadeIn">
             <div>
-                <h1 className="font-display text-2xl font-bold text-slate-brand">Pagos</h1>
-                <p className="text-gray-400 text-sm mt-1">Historial de todos los pagos realizados</p>
+                <h1 className="font-display text-2xl font-bold text-text-primary">Pagos</h1>
+                <p className="text-text-muted text-sm mt-1">Historial de todos los pagos realizados</p>
             </div>
 
             {/* Filters */}
             <div className="card p-4">
-                <div className="flex items-center gap-2 mb-3 text-sm text-gray-500">
+                <div className="flex items-center gap-2 mb-3 text-sm text-text-muted">
                     <FiFilter className="w-4 h-4" /> Filtros
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -70,18 +70,18 @@ export default function Pagos() {
             {/* Summary */}
             {!loading && (
                 <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-400">{pagos.length} pagos encontrados</span>
-                    <span className="font-bold text-slate-brand">Total: S/. {totalFiltrado.toFixed(2)}</span>
+                    <span className="text-text-muted">{pagos.length} pagos encontrados</span>
+                    <span className="font-bold text-text-primary">Total: S/. {totalFiltrado.toFixed(2)}</span>
                 </div>
             )}
 
-            {error && <p className="text-red-400 text-sm">{error}</p>}
+            {error && <p className="text-danger text-sm">{error}</p>}
 
             <div className="card overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="bg-gray-50 text-xs text-gray-400 uppercase tracking-wider">
+                            <tr className="bg-bg text-xs text-text-muted uppercase tracking-wider">
                                 <th className="px-6 py-3 text-left">Fecha</th>
                                 <th className="px-6 py-3 text-left">Costurero</th>
                                 <th className="px-6 py-3 text-left">Producción</th>
@@ -90,25 +90,25 @@ export default function Pagos() {
                                 <th className="px-6 py-3 text-left">Detalle</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
+                        <tbody className="divide-y divide-border">
                             {loading ? (
                                 Array.from({ length: 5 }).map((_, i) => (
                                     <tr key={i}>{Array.from({ length: 6 }).map((_, j) => <td key={j} className="px-6 py-4"><div className="skeleton h-4 w-20 rounded" /></td>)}</tr>
                                 ))
                             ) : pagos.length === 0 ? (
-                                <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-400">No hay pagos registrados con estos filtros</td></tr>
+                                <tr><td colSpan={6} className="px-6 py-8 text-center text-text-muted">No hay pagos registrados con estos filtros</td></tr>
                             ) : pagos.map((p) => (
-                                <tr key={p.id_pago} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-6 py-4 text-gray-600 whitespace-nowrap">{new Date(p.fecha_pago).toLocaleDateString('es-PE')}</td>
-                                    <td className="px-6 py-4 font-medium text-slate-brand">
+                                <tr key={p.id_pago} className="hover:bg-[#1F1F1F] transition-colors">
+                                    <td className="px-6 py-4 text-text-muted whitespace-nowrap">{new Date(p.fecha_pago).toLocaleDateString('es-PE')}</td>
+                                    <td className="px-6 py-4 font-medium text-text-primary">
                                         {(p.produccion as { costurero?: { nombre?: string } } | undefined)?.costurero?.nombre ?? '—'}
                                     </td>
-                                    <td className="px-6 py-4 text-gray-600">#{p.id_produccion}</td>
+                                    <td className="px-6 py-4 text-text-muted">#{p.id_produccion}</td>
                                     <td className="px-6 py-4">
-                                        <span className={`badge ${tipoBadge[p.tipo_pago] ?? 'bg-gray-100 text-gray-600'}`}>{p.tipo_pago}</span>
+                                        <span className={`badge ${tipoBadge[p.tipo_pago] ?? 'bg-text-muted/20 text-text-muted'}`}>{p.tipo_pago}</span>
                                     </td>
-                                    <td className="px-6 py-4 text-right font-bold text-green-600">S/. {p.monto.toFixed(2)}</td>
-                                    <td className="px-6 py-4 text-gray-500 text-xs">{p.detalle ?? '—'}</td>
+                                    <td className="px-6 py-4 text-right font-bold text-success">S/. {p.monto.toFixed(2)}</td>
+                                    <td className="px-6 py-4 text-text-muted text-xs">{p.detalle ?? '—'}</td>
                                 </tr>
                             ))}
                         </tbody>
