@@ -90,13 +90,34 @@ export default function Produccion() {
         refetch()
     }
 
-    const handleChangeEstado = async (p: ProduccionConDeuda, estado: EstadoProduccion) => {
-        await supabase.from('produccion').update({ estado }).eq('id_produccion', p.id_produccion)
-        refetch()
-        if (selected?.id_produccion === p.id_produccion) {
-            setSelected({ ...p, estado })
-        }
+    const handleChangeEstado = async (p: ProduccionConDeuda, nuevoEstado: EstadoProduccion) => {
+    // 1. Validar si ya está en ese estado para no hacer renders en vano
+    if (p.estado === nuevoEstado) return;
+
+    // 2. Guardamos el estado original por si la API falla
+    const estadoOriginal = p.estado;
+
+    // 3. ACTUALIZACIÓN OPTIMISTA (Instantánea en la UI)
+    if (selected?.id_produccion === p.id_produccion) {
+        setSelected({ ...p, estado: nuevoEstado });
     }
+    // Truco: No uses refetch de inmediato, mejor actualiza la cache/estado local de "producciones" 
+    // si es posible, o llama la API silenciosamente.
+
+    // 4. Llamada a base de datos
+    const { error } = await supabase.from('produccion').update({ estado: nuevoEstado }).eq('id_produccion', p.id_produccion)
+    
+    if (error) {
+        alert("Error al cambiar de estado");
+        // Revertimos si falla
+        if (selected?.id_produccion === p.id_produccion) {
+            setSelected({ ...p, estado: estadoOriginal });
+        }
+        refetch(); 
+    } else {
+        refetch(); // Sincroniza en background
+    }
+}
 
     const handleRegisterPago = async () => {
         if (!pagoForm.monto || Number(pagoForm.monto) <= 0) {
@@ -209,59 +230,95 @@ export default function Produccion() {
     if (mode === 'create') return (
         <div className="max-w-2xl animate-fadeIn">
             <div className="flex items-center gap-3 mb-6">
-                <button onClick={() => setMode('list')} className="text-gray-400 hover:text-gray-600 text-sm">← Volver</button>
+                <button onClick={() => setMode('list')} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Volver">
+                    <FiChevronDown className="w-5 h-5 transform rotate-90" />
+                </button>
                 <h1 className="font-display text-2xl font-bold text-slate-brand">Nueva Producción</h1>
             </div>
-            <div className="card p-6 space-y-4">
-                {formError && <p className="text-red-400 text-sm bg-red-50 rounded-lg px-3 py-2">{formError}</p>}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2">
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Modelo *</label>
-                        <select value={form.id_modelo} onChange={(e) => setForm((f) => ({ ...f, id_modelo: e.target.value }))} className="input-field">
+
+            <div className="card p-6 space-y-5">
+                {formError && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3 flex items-start gap-3">
+                        <FiX className="w-4 h-4 shrink-0 mt-0.5" />
+                        <p>{formError}</p>
+                    </div>
+                )}
+
+                {/* Selects */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Modelo *</label>
+                        <select value={form.id_modelo} onChange={(e) => setForm((f) => ({ ...f, id_modelo: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
                             <option value="">Seleccionar modelo</option>
                             {modelos.map((m) => <option key={m.id_modelo} value={m.id_modelo}>{m.nombre_modelo}</option>)}
                         </select>
                     </div>
-                    <div className="col-span-2">
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Costurero *</label>
-                        <select value={form.id_costurero} onChange={(e) => setForm((f) => ({ ...f, id_costurero: e.target.value }))} className="input-field">
+
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Costurero *</label>
+                        <select value={form.id_costurero} onChange={(e) => setForm((f) => ({ ...f, id_costurero: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
                             <option value="">Seleccionar costurero</option>
                             {costureros.map((c) => <option key={c.id_costurero} value={c.id_costurero}>{c.nombre}</option>)}
                         </select>
                     </div>
+                </div>
+
+                {/* Dates */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {[
                         { field: 'fecha_inicio', label: 'Fecha Inicio *', type: 'date' },
                         { field: 'fecha_termino', label: 'Fecha Término', type: 'date' },
+                    ].map(({ field, label, type }) => (
+                        <div key={field}>
+                            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">{label}</label>
+                            <input type={type} value={(form as Record<string, unknown>)[field] as string} onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all" />
+                        </div>
+                    ))}
+                </div>
+
+                {/* Quantities and prices */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {[
                         { field: 'cantidad_prendas', label: 'Cantidad de Prendas *', type: 'number' },
                         { field: 'precio_costura', label: 'Precio Costura (S/.) *', type: 'number' },
                         { field: 'cantidad_entregada', label: 'Cantidad Entregada', type: 'number' },
                         { field: 'cantidad_falladas', label: 'Cantidad Falladas', type: 'number' },
                     ].map(({ field, label, type }) => (
                         <div key={field}>
-                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{label}</label>
-                            <input type={type} value={(form as Record<string, unknown>)[field] as string} onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))} className="input-field" min={type === 'number' ? '0' : undefined} step={field === 'precio_costura' ? '0.01' : undefined} />
+                            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">{label}</label>
+                            <input type={type} value={(form as Record<string, unknown>)[field] as string} onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all" min="0" step={field === 'precio_costura' ? '0.01' : '1'} />
                         </div>
                     ))}
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Estado</label>
-                        <select value={form.estado} onChange={(e) => setForm((f) => ({ ...f, estado: e.target.value as EstadoProduccion }))} className="input-field">
-                            {ESTADOS.map((s) => <option key={s} value={s}>{estadoConfig[s].label}</option>)}
-                        </select>
-                    </div>
-                    <div className="col-span-2">
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Observación</label>
-                        <textarea value={form.observacion} onChange={(e) => setForm((f) => ({ ...f, observacion: e.target.value }))} rows={3} className="input-field resize-none" placeholder="Notas adicionales..." />
-                    </div>
                 </div>
+
+                {/* Estado */}
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Estado Inicial</label>
+                    <select value={form.estado} onChange={(e) => setForm((f) => ({ ...f, estado: e.target.value as EstadoProduccion }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
+                        {ESTADOS.map((s) => <option key={s} value={s}>{estadoConfig[s].label}</option>)}
+                    </select>
+                </div>
+
+                {/* Observación */}
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Observaciones</label>
+                    <textarea value={form.observacion} onChange={(e) => setForm((f) => ({ ...f, observacion: e.target.value }))} rows={3} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all resize-none" placeholder="Notas adicionales..." />
+                </div>
+
+                {/* Summary */}
                 {form.cantidad_prendas && form.precio_costura && (
-                    <div className="bg-cream rounded-xl p-4 text-sm">
-                        <span className="text-gray-500">Total estimado: </span>
-                        <span className="font-bold text-slate-brand">S/. {(Number(form.cantidad_prendas) * Number(form.precio_costura)).toFixed(2)}</span>
+                    <div className="bg-accent/5 border border-accent/20 rounded-lg p-4 flex items-center justify-between">
+                        <span className="text-sm font-semibold text-gray-600">Total estimado:</span>
+                        <span className="text-lg font-bold text-accent">S/. {(Number(form.cantidad_prendas) * Number(form.precio_costura)).toFixed(2)}</span>
                     </div>
                 )}
+
+                {/* Actions */}
                 <div className="flex justify-end gap-3 pt-2">
-                    <button onClick={() => setMode('list')} className="btn-secondary text-sm">Cancelar</button>
-                    <button onClick={handleCreate} disabled={saving} className="btn-primary text-sm">
+                    <button onClick={() => setMode('list')} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                        Cancelar
+                    </button>
+                    <button onClick={handleCreate} disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-accent/90 disabled:opacity-50 rounded-lg transition-colors flex items-center gap-2">
                         {saving ? <span className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" /> : 'Crear Producción'}
                     </button>
                 </div>
@@ -367,40 +424,53 @@ export default function Produccion() {
                 {showPagoModal && (
                     <>
                         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={() => setShowPagoModal(false)} />
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm animate-fadeIn">
-                                <div className="flex items-center justify-between px-6 py-4 border-b">
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[calc(100vh-2rem)] flex flex-col animate-fadeIn">
+                                {/* Header */}
+                                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
                                     <h3 className="font-display font-semibold text-slate-brand">Registrar Pago</h3>
-                                    <button onClick={() => setShowPagoModal(false)}><FiX className="w-5 h-5 text-gray-400" /></button>
+                                    <button onClick={() => setShowPagoModal(false)} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                                        <FiX className="w-5 h-5" />
+                                    </button>
                                 </div>
-                                <div className="px-6 py-4 space-y-4">
-                                    <div className="bg-cream rounded-xl p-3 text-sm">
-                                        <span className="text-gray-400">Deuda actual: </span>
-                                        <span className="font-bold text-red-500">S/. {selected.deuda.toFixed(2)}</span>
+
+                                {/* Content */}
+                                <div className="px-6 py-5 overflow-y-auto flex-1 space-y-4">
+                                    <div className="bg-accent/5 border border-accent/20 rounded-lg p-3 text-sm">
+                                        <span className="text-gray-600">Deuda Pendiente: </span>
+                                        <span className="font-bold text-accent text-lg">S/. {selected.deuda.toFixed(2)}</span>
                                     </div>
+
                                     <div>
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Tipo de Pago</label>
-                                        <select value={pagoForm.tipo_pago} onChange={(e) => setPagoForm((f) => ({ ...f, tipo_pago: e.target.value as TipoPago }))} className="input-field">
+                                        <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Tipo de Pago</label>
+                                        <select value={pagoForm.tipo_pago} onChange={(e) => setPagoForm((f) => ({ ...f, tipo_pago: e.target.value as TipoPago }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
                                             {TIPOS_PAGO.map((t) => <option key={t} value={t}>{t}</option>)}
                                         </select>
                                     </div>
+
                                     <div>
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Monto (S/.) *</label>
-                                        <input type="number" min="0.01" step="0.01" value={pagoForm.monto} onChange={(e) => setPagoForm((f) => ({ ...f, monto: e.target.value }))} className="input-field" placeholder="0.00" />
+                                        <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Monto (S/.) *</label>
+                                        <input type="number" min="0.01" step="0.01" value={pagoForm.monto} onChange={(e) => setPagoForm((f) => ({ ...f, monto: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all" placeholder="0.00" />
                                     </div>
+
                                     <div>
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Fecha Pago</label>
-                                        <input type="date" value={pagoForm.fecha_pago} onChange={(e) => setPagoForm((f) => ({ ...f, fecha_pago: e.target.value }))} className="input-field" />
+                                        <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Fecha Pago</label>
+                                        <input type="date" value={pagoForm.fecha_pago} onChange={(e) => setPagoForm((f) => ({ ...f, fecha_pago: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all" />
                                     </div>
+
                                     <div>
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Detalle (opcional)</label>
-                                        <input type="text" value={pagoForm.detalle} onChange={(e) => setPagoForm((f) => ({ ...f, detalle: e.target.value }))} className="input-field" placeholder="Transferencia BCP..." />
+                                        <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Detalle (opcional)</label>
+                                        <input type="text" value={pagoForm.detalle} onChange={(e) => setPagoForm((f) => ({ ...f, detalle: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all" placeholder="Transferencia BCP..." />
                                     </div>
                                 </div>
-                                <div className="px-6 py-4 border-t flex justify-end gap-3">
-                                    <button onClick={() => setShowPagoModal(false)} className="btn-secondary text-sm py-2">Cancelar</button>
-                                    <button onClick={handleRegisterPago} disabled={savingPago || !pagoForm.monto} className="btn-primary text-sm py-2">
-                                        {savingPago ? <span className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" /> : 'Registrar'}
+
+                                {/* Footer */}
+                                <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 shrink-0">
+                                    <button onClick={() => setShowPagoModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                                        Cancelar
+                                    </button>
+                                    <button onClick={handleRegisterPago} disabled={savingPago || !pagoForm.monto} className="px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-accent/90 disabled:opacity-50 rounded-lg transition-colors flex items-center gap-2">
+                                        {savingPago ? <span className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" /> : 'Registrar Pago'}
                                     </button>
                                 </div>
                             </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import type {
     Categoria,
@@ -135,7 +135,7 @@ export function useModelosAdmin() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
-    const fetchAll = () => {
+    const fetchAll = useCallback(() => {
         setLoading(true)
         supabase
             .from('modelo')
@@ -151,9 +151,9 @@ export function useModelosAdmin() {
                 else setData((data as Modelo[]) ?? [])
                 setLoading(false)
             })
-    }
+    }, [])
 
-    useEffect(() => { fetchAll() }, [])
+    useEffect(() => { fetchAll() }, [fetchAll])
     return { data, loading, error, refetch: fetchAll }
 }
 
@@ -163,7 +163,7 @@ export function useCostureros(soloActivos = false) {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
-    const fetchAll = () => {
+    const fetchAll = useCallback(() => {
         setLoading(true)
         let q = supabase.from('costurero').select('*').order('nombre')
         if (soloActivos) q = q.eq('activo', true)
@@ -172,9 +172,9 @@ export function useCostureros(soloActivos = false) {
             else setData(data ?? [])
             setLoading(false)
         })
-    }
+    }, [soloActivos])
 
-    useEffect(() => { fetchAll() }, [soloActivos])
+    useEffect(() => { fetchAll() }, [fetchAll])
     return { data, loading, error, refetch: fetchAll }
 }
 
@@ -184,7 +184,7 @@ export function useProducciones(filtros?: { estado?: string; id_costurero?: numb
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
-    const fetchAll = () => {
+    const fetchAll = useCallback(() => {
         setLoading(true)
         let q = supabase
             .from('produccion')
@@ -209,9 +209,9 @@ export function useProducciones(filtros?: { estado?: string; id_costurero?: numb
             setData(enriched)
             setLoading(false)
         })
-    }
+    }, [filtros?.estado, filtros?.id_costurero])
 
-    useEffect(() => { fetchAll() }, [filtros?.estado, filtros?.id_costurero])
+    useEffect(() => { fetchAll() }, [fetchAll])
     return { data, loading, error, refetch: fetchAll }
 }
 
@@ -227,7 +227,7 @@ export function usePagos(filtros?: {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
-    const fetchAll = () => {
+    const fetchAll = useCallback(() => {
         setLoading(true)
         let q = supabase
             .from('pago_produccion')
@@ -252,48 +252,22 @@ export function usePagos(filtros?: {
             else setData((data as typeof data) ?? [])
             setLoading(false)
         })
-    }
+    }, [filtros?.id_produccion, filtros?.tipo_pago, filtros?.desde, filtros?.hasta])
 
-    useEffect(() => { fetchAll() }, [filtros?.id_produccion, filtros?.tipo_pago, filtros?.desde, filtros?.hasta])
+    useEffect(() => { fetchAll() }, [fetchAll])
     return { data, loading, error, refetch: fetchAll }
 }
 
 // ── Dashboard stats ──────────────────────────────────────────
 export function useDashboardStats() {
-    const [stats, setStats] = useState({
-        produccionesActivas: 0,
-        pagadoEsteMes: 0,
-        deudaTotal: 0,
-        costureroActivos: 0,
-    })
+    const [stats, setStats] = useState({ produccionesActivas: 0, pagadoEsteMes: 0, deudaTotal: 0, costureroActivos: 0 })
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        const now = new Date()
-        const primerDiaMes = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-
-        Promise.all([
-            supabase.from('produccion').select('*').eq('estado', 'EN_PRODUCCION'),
-            supabase.from('pago_produccion').select('monto').gte('fecha_pago', primerDiaMes),
-            supabase.from('produccion').select('*, pagos:pago_produccion(monto)'),
-            supabase.from('costurero').select('*').eq('activo', true),
-        ]).then(([activas, pagosMes, todasProd, costureros]) => {
-            const deudaTotal = ((todasProd.data as Produccion[]) ?? [])
-                .filter((p) => p.estado !== 'PAGADO')
-                .reduce((acc, p) => {
-                    const total = p.cantidad_prendas * p.precio_costura
-                    const pagado = (p.pagos ?? []).reduce((a, x) => a + x.monto, 0)
-                    return acc + (total - pagado)
-                }, 0)
-
-            setStats({
-                produccionesActivas: activas.data?.length ?? 0,
-                pagadoEsteMes: (pagosMes.data ?? []).reduce((a, x) => a + x.monto, 0),
-                deudaTotal,
-                costureroActivos: costureros.data?.length ?? 0,
-            })
-            setLoading(false)
-        })
+        supabase.rpc('obtener_estadisticas_dashboard').then(({ data }) => {
+            if (data) setStats(data);
+            setLoading(false);
+        });
     }, [])
 
     return { stats, loading }

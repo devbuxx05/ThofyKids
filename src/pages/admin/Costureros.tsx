@@ -125,40 +125,52 @@ export default function Costureros() {
             {showModal && (
                 <>
                     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-fadeIn">
-                            <div className="flex items-center justify-between px-6 py-4 border-b">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[calc(100vh-2rem)] flex flex-col animate-fadeIn">
+                            {/* Header */}
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
                                 <h2 className="font-display font-semibold text-slate-brand">
                                     {editId ? 'Editar Costurero' : 'Nuevo Costurero'}
                                 </h2>
-                                <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+                                <button onClick={() => setShowModal(false)} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                                     <FiX className="w-5 h-5" />
                                 </button>
                             </div>
-                            <div className="px-6 py-5 space-y-4">
-                                {formError && <p className="text-red-400 text-sm bg-red-50 rounded-lg px-3 py-2">{formError}</p>}
+
+                            {/* Content with scroll */}
+                            <div className="px-6 py-5 overflow-y-auto flex-1 space-y-4">
+                                {formError && (
+                                    <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3 flex items-start gap-3">
+                                        <FiX className="w-4 h-4 shrink-0 mt-0.5" />
+                                        <p>{formError}</p>
+                                    </div>
+                                )}
                                 {[
                                     { field: 'nombre', label: 'Nombre completo', type: 'text', placeholder: 'María García' },
-                                    { field: 'dni', label: 'DNI', type: 'text', placeholder: '12345678' },
+                                    { field: 'dni', label: 'DNI/RUC', type: 'text', placeholder: '12345678' },
                                     { field: 'telefono', label: 'Teléfono', type: 'tel', placeholder: '999 888 777' },
                                     { field: 'direccion', label: 'Dirección (opcional)', type: 'text', placeholder: 'Av. Ejemplo 123' },
                                     { field: 'numero_cuenta', label: 'Número de cuenta', type: 'text', placeholder: '0011-0000-00-00000000' },
                                 ].map(({ field, label, type, placeholder }) => (
                                     <div key={field}>
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{label}</label>
+                                        <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">{label}</label>
                                         <input
                                             type={type}
                                             placeholder={placeholder}
                                             value={(form as Record<string, unknown>)[field] as string}
                                             onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))}
-                                            className="input-field"
+                                            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
                                         />
                                     </div>
                                 ))}
                             </div>
-                            <div className="px-6 py-4 border-t flex justify-end gap-3">
-                                <button onClick={() => setShowModal(false)} className="btn-secondary text-sm py-2 px-5">Cancelar</button>
-                                <button onClick={handleSave} disabled={saving} className="btn-primary text-sm py-2 px-5">
+
+                            {/* Footer */}
+                            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 shrink-0">
+                                <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                                    Cancelar
+                                </button>
+                                <button onClick={handleSave} disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-accent/90 disabled:opacity-50 rounded-lg transition-colors flex items-center gap-2">
                                     {saving ? <span className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" /> : (editId ? 'Guardar Cambios' : 'Crear Costurero')}
                                 </button>
                             </div>

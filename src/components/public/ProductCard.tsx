@@ -27,8 +27,8 @@ export default function ProductCard({ modelo }: Props) {
     const colores = modelo.colores ?? []
     const tallas = modelo.tallas ?? []
 
-    const [selectedColor, setSelectedColor] = useState<ModeloColor | null>(colores[0] ?? null)
-    const [selectedTalla, setSelectedTalla] = useState<string>(tallas[0]?.talla?.nombre ?? '')
+    const [selectedColor, setSelectedColor] = useState<ModeloColor | null>(colores.length > 0 ? colores[0] : null)
+    const [selectedTalla, setSelectedTalla] = useState<string>(tallas.length > 0 ? (tallas[0]?.talla?.nombre ?? '') : 'Única')
     const [qty, setQty] = useState(1)
     const [added, setAdded] = useState(false)
 
@@ -160,7 +160,8 @@ export default function ProductCard({ modelo }: Props) {
                     <button
                         id={`add-to-cart-${modelo.id_modelo}`}
                         onClick={handleAddToCart}
-                        disabled={!selectedTalla || !selectedColor}
+                        // Solo bloqueamos si HAY tallas/colores disponibles pero el usuario no ha seleccionado ninguno
+                        disabled={(tallas.length > 0 && !selectedTalla) || (colores.length > 0 && !selectedColor)}
                         className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-full text-sm font-semibold uppercase tracking-wide transition-all ${added
                                 ? 'bg-green-500 text-white'
                                 : 'bg-accent text-white hover:bg-accent-dark active:scale-95'

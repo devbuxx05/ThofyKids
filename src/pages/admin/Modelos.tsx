@@ -192,52 +192,63 @@ export default function Modelos() {
             {showModal && (
                 <>
                     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg my-4 animate-fadeIn">
-                            <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white rounded-t-2xl">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[calc(100vh-2rem)] flex flex-col animate-fadeIn">
+                            {/* Header */}
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
                                 <h2 className="font-display font-semibold text-slate-brand">{editId ? 'Editar Modelo' : 'Nuevo Modelo'}</h2>
-                                <button onClick={() => setShowModal(false)}><FiX className="w-5 h-5 text-gray-400" /></button>
+                                <button onClick={() => setShowModal(false)} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                                    <FiX className="w-5 h-5" />
+                                </button>
                             </div>
 
-                            <div className="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto">
-                                {formError && <p className="text-red-400 text-sm bg-red-50 rounded-lg px-3 py-2">{formError}</p>}
+                            {/* Content with scroll */}
+                            <div className="px-6 py-5 overflow-y-auto flex-1 space-y-4">
+                                {formError && (
+                                    <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3 flex items-start gap-3">
+                                        <FiX className="w-4 h-4 shrink-0 mt-0.5" />
+                                        <p>{formError}</p>
+                                    </div>
+                                )}
 
                                 {/* Basic fields */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="col-span-2">
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Nombre del Modelo *</label>
-                                        <input type="text" value={form.nombre_modelo} onChange={(e) => setForm((f) => ({ ...f, nombre_modelo: e.target.value }))} className="input-field" placeholder="Pantalón Jeans" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Categoría *</label>
-                                        <select value={form.id_categoria} onChange={(e) => setForm((f) => ({ ...f, id_categoria: e.target.value }))} className="input-field">
-                                            <option value="">Seleccionar</option>
-                                            {categorias.map((c) => <option key={c.id_categoria} value={c.id_categoria}>{c.nombre}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Precio Ref. (S/.) *</label>
-                                        <input type="number" min="0" step="0.01" value={form.precio_referencia} onChange={(e) => setForm((f) => ({ ...f, precio_referencia: e.target.value }))} className="input-field" />
-                                    </div>
-                                    <div className="col-span-2">
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Descripción</label>
-                                        <textarea value={form.descripcion} onChange={(e) => setForm((f) => ({ ...f, descripcion: e.target.value }))} rows={2} className="input-field resize-none" />
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600">
-                                            <input type="checkbox" checked={form.destacado} onChange={(e) => setForm((f) => ({ ...f, destacado: e.target.checked }))} className="w-4 h-4 accent-[#C98B8B]" />
-                                            Destacado
-                                        </label>
-                                        <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600">
-                                            <input type="checkbox" checked={form.activo} onChange={(e) => setForm((f) => ({ ...f, activo: e.target.checked }))} className="w-4 h-4 accent-[#C98B8B]" />
-                                            Activo
-                                        </label>
-                                    </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Nombre del Modelo *</label>
+                                    <input type="text" value={form.nombre_modelo} onChange={(e) => setForm((f) => ({ ...f, nombre_modelo: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all" placeholder="Pantalón Jeans" />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Categoría *</label>
+                                    <select value={form.id_categoria} onChange={(e) => setForm((f) => ({ ...f, id_categoria: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
+                                        <option value="">Seleccionar categoría</option>
+                                        {categorias.map((c) => <option key={c.id_categoria} value={c.id_categoria}>{c.nombre}</option>)}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Precio Ref. (S/.) *</label>
+                                    <input type="number" min="0" step="0.01" value={form.precio_referencia} onChange={(e) => setForm((f) => ({ ...f, precio_referencia: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all" />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Descripción</label>
+                                    <textarea value={form.descripcion} onChange={(e) => setForm((f) => ({ ...f, descripcion: e.target.value }))} rows={2} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all resize-none" />
+                                </div>
+
+                                <div className="flex items-center gap-4 pt-2">
+                                    <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600">
+                                        <input type="checkbox" checked={form.destacado} onChange={(e) => setForm((f) => ({ ...f, destacado: e.target.checked }))} className="w-4 h-4 rounded accent-accent" />
+                                        Destacado
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600">
+                                        <input type="checkbox" checked={form.activo} onChange={(e) => setForm((f) => ({ ...f, activo: e.target.checked }))} className="w-4 h-4 rounded accent-accent" />
+                                        Activo
+                                    </label>
                                 </div>
 
                                 {/* Tallas */}
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Tallas Disponibles</label>
+                                <div className="pt-2">
+                                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Tallas Disponibles</label>
                                     <div className="flex flex-wrap gap-2">
                                         {tallas.map((t) => (
                                             <button
@@ -245,9 +256,9 @@ export default function Modelos() {
                                                 type="button"
                                                 onClick={() => toggleTalla(t.id_talla)}
                                                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${form.tallas.includes(t.id_talla)
-                                                        ? 'bg-accent border-accent text-white'
-                                                        : 'border-gray-200 text-gray-600 hover:border-accent'
-                                                    }`}
+                                                    ? 'bg-accent border-accent text-white'
+                                                    : 'border-gray-200 text-gray-600 hover:border-accent hover:bg-gray-50'
+                                                }`}
                                             >
                                                 {t.nombre}
                                             </button>
@@ -256,27 +267,27 @@ export default function Modelos() {
                                 </div>
 
                                 {/* Colors + photos */}
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Colores y Fotos</label>
-                                    <div className="space-y-2">
+                                <div className="pt-2">
+                                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Colores y Fotos</label>
+                                    <div className="space-y-2 max-h-48 overflow-y-auto">
                                         {colores.map((c) => {
                                             const existing = form.colores.find((fc) => fc.id_color === c.id_color)
                                             return (
-                                                <div key={c.id_color} className="flex items-center gap-3 p-2.5 border border-gray-100 rounded-xl">
-                                                    <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 shrink-0">
-                                                        {c.nombre.slice(0, 1)}
+                                                <div key={c.id_color} className="flex items-center gap-2 p-2 border border-gray-100 rounded-lg hover:border-gray-200 transition-colors">
+                                                    <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 shrink-0">
+                                                        {c.nombre.slice(0, 1).toUpperCase()}
                                                     </div>
-                                                    <span className="text-sm text-gray-700 w-20 shrink-0">{c.nombre}</span>
-                                                    <div className="flex-1 flex items-center gap-2 min-w-0">
+                                                    <span className="text-xs text-gray-700 w-16 shrink-0">{c.nombre}</span>
+                                                    <div className="flex-1 flex items-center gap-1 min-w-0">
                                                         <input
                                                             type="text"
-                                                            placeholder="URL de foto o sube archivo"
+                                                            placeholder="URL foto"
                                                             value={existing?.foto_url ?? ''}
                                                             onChange={(e) => handleColorPhotoUrl(c.id_color, c.nombre, e.target.value)}
-                                                            className="input-field text-xs py-1.5 flex-1 min-w-0"
+                                                            className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-accent/50"
                                                         />
-                                                        <label className="cursor-pointer text-accent hover:text-accent-dark p-1.5 rounded-lg hover:bg-accent/10 transition-colors shrink-0" title="Subir foto">
-                                                            <FiUpload className="w-4 h-4" />
+                                                        <label className="cursor-pointer text-accent hover:text-accent-dark p-1 rounded hover:bg-accent/10 transition-colors shrink-0" title="Subir foto">
+                                                            <FiUpload className="w-3.5 h-3.5" />
                                                             <input
                                                                 type="file"
                                                                 accept="image/*"
@@ -288,7 +299,7 @@ export default function Modelos() {
                                                             />
                                                         </label>
                                                         {existing?.foto_url && (
-                                                            <img src={existing.foto_url} alt={c.nombre} className="w-8 h-8 rounded-lg object-cover shrink-0" />
+                                                            <img src={existing.foto_url} alt={c.nombre} className="w-6 h-6 rounded object-cover shrink-0" />
                                                         )}
                                                     </div>
                                                 </div>
@@ -298,9 +309,12 @@ export default function Modelos() {
                                 </div>
                             </div>
 
-                            <div className="px-6 py-4 border-t flex justify-end gap-3">
-                                <button onClick={() => setShowModal(false)} className="btn-secondary text-sm py-2 px-5">Cancelar</button>
-                                <button onClick={handleSave} disabled={saving} className="btn-primary text-sm py-2 px-5">
+                            {/* Footer */}
+                            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 shrink-0">
+                                <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                                    Cancelar
+                                </button>
+                                <button onClick={handleSave} disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-accent/90 disabled:opacity-50 rounded-lg transition-colors flex items-center gap-2">
                                     {saving ? <span className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" /> : (editId ? 'Guardar Cambios' : 'Crear Modelo')}
                                 </button>
                             </div>
