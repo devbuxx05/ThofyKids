@@ -43,7 +43,7 @@ export default function Header() {
                                 to={l.to}
                                 end={l.to === '/'}
                                 className={({ isActive }) =>
-                                    `px-4 py-2 rounded-[6px] text-sm font-medium transition-all duration-hover ${
+                                    `px-4 py-2 rounded-[6px] text-sm font-medium transition-all duration-200 ${
                                         isActive
                                             ? 'text-accent'
                                             : 'text-text-muted hover:text-accent'
@@ -60,7 +60,7 @@ export default function Header() {
                         <button
                             id="cart-btn"
                             onClick={openCart}
-                            className="relative flex items-center justify-center w-10 h-10 rounded-[6px] text-text-primary hover:text-accent transition-colors duration-hover"
+                            className="relative flex items-center justify-center w-10 h-10 rounded-[6px] text-text-primary hover:text-accent transition-colors duration-200"
                             aria-label="Abrir carrito"
                         >
                             <FiShoppingBag className="w-5 h-5" />

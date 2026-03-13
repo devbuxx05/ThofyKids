@@ -36,7 +36,7 @@ export default function Login() {
                     <p className="text-text-muted text-sm mt-1">Acceso Interno</p>
                 </div>
 
-                <div className="bg-surface border border-border rounded-card p-8">
+                <div className="bg-bg-surface border border-border rounded-card p-8">
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div>
                             <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">

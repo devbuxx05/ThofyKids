@@ -5,6 +5,7 @@ import type {
     Costurero,
     Modelo,
     PagoProduccion,
+    ModeloFoto, 
     Produccion,
     ProduccionConDeuda,
     Talla,
@@ -21,7 +22,7 @@ export function useCategorias() {
         supabase
             .from('categoria')
             .select('*')
-            .order('nombre')
+            .order('id_talla')
             .then(({ data, error }) => {
                 if (error) setError(error.message)
                 else setData(data ?? [])
@@ -41,7 +42,7 @@ export function useTallas() {
         supabase
             .from('talla')
             .select('*')
-            .order('nombre')
+            .order('id_talla')
             .then(({ data }) => {
                 setData(data ?? [])
                 setLoading(false)
@@ -83,7 +84,8 @@ export function useModelosPublicos(categoriaId?: number) {
         *,
         categoria:id_categoria(*),
         colores:modelo_color(*, color:id_color(*)),
-        tallas:modelo_talla(*, talla:id_talla(*))
+        tallas:modelo_talla(*, talla:id_talla(*)),
+        fotos:modelo_foto(*)
       `)
             .eq('activo', true)
             .order('nombre_modelo')
@@ -115,7 +117,8 @@ export function useModelosDestacados() {
         *,
         categoria:id_categoria(*),
         colores:modelo_color(*, color:id_color(*)),
-        tallas:modelo_talla(*, talla:id_talla(*))
+        tallas:modelo_talla(*, talla:id_talla(*)),
+        fotos:modelo_foto(*)
       `)
             .eq('activo', true)
             .eq('destacado', true)
@@ -143,7 +146,8 @@ export function useModelosAdmin() {
         *,
         categoria:id_categoria(*),
         colores:modelo_color(*, color:id_color(*)),
-        tallas:modelo_talla(*, talla:id_talla(*))
+        tallas:modelo_talla(*, talla:id_talla(*)),
+        fotos:modelo_foto(*)
       `)
             .order('nombre_modelo')
             .then(({ data, error }) => {
@@ -201,10 +205,16 @@ export function useProducciones(filtros?: { estado?: string; id_costurero?: numb
 
         q.then(({ data, error }) => {
             if (error) { setError(error.message); setLoading(false); return }
-            const enriched = ((data as Produccion[]) ?? []).map((p) => {
+            
+            const enriched: ProduccionConDeuda[] = ((data as Produccion[]) ?? []).map((p) => {
                 const total = p.cantidad_prendas * p.precio_costura
                 const pagado = (p.pagos ?? []).reduce((a, x) => a + x.monto, 0)
-                return { ...p, total_produccion: total, total_pagado: pagado, deuda: total - pagado }
+                return {
+                    ...p,
+                    total_produccion: total,
+                    total_pagado: pagado,
+                    deuda: total - pagado,
+                }
             })
             setData(enriched)
             setLoading(false)
@@ -212,47 +222,62 @@ export function useProducciones(filtros?: { estado?: string; id_costurero?: numb
     }, [filtros?.estado, filtros?.id_costurero])
 
     useEffect(() => { fetchAll() }, [fetchAll])
-    return { data, loading, error, refetch: fetchAll }
+    
+    // AQUÍ ESTÁ LA MAGIA: Exportamos setData como setOptimisticData
+    return { 
+        data, 
+        loading, 
+        error, 
+        refetch: fetchAll,
+        setOptimisticData: setData 
+    }
 }
 
 // ── Pagos ────────────────────────────────────────────────────
 export function usePagos(filtros?: {
     id_produccion?: number
-    id_costurero?: number
+    id_costurero?: number | string // Permitimos string para el select
     tipo_pago?: string
     desde?: string
     hasta?: string
 }) {
-    const [data, setData] = useState<(PagoProduccion & { produccion?: Partial<Produccion & { costurero?: Pick<Costurero, 'nombre'> }> })[]>([])
+    // Usamos any temporalmente para no tener problemas de tipado con el inner join
+    const [data, setData] = useState<any[]>([]) 
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
     const fetchAll = useCallback(() => {
         setLoading(true)
+        
+        // El !inner es crucial aquí. Obliga a Supabase a enlazar la tabla Producción 
+        // para que podamos filtrar a través de ella.
         let q = supabase
             .from('pago_produccion')
             .select(`
-        *,
-        produccion:id_produccion(
-          id_produccion,
-          id_modelo,
-          estado,
-          costurero:id_costurero(nombre)
-        )
-      `)
+                *,
+                produccion!inner(
+                    id_produccion,
+                    id_modelo,
+                    estado,
+                    id_costurero,
+                    costurero:id_costurero(nombre)
+                )
+            `)
             .order('fecha_pago', { ascending: false })
 
         if (filtros?.id_produccion) q = q.eq('id_produccion', filtros.id_produccion)
         if (filtros?.tipo_pago) q = q.eq('tipo_pago', filtros.tipo_pago)
         if (filtros?.desde) q = q.gte('fecha_pago', filtros.desde)
         if (filtros?.hasta) q = q.lte('fecha_pago', filtros.hasta)
+        // Aquí aplicamos el filtro del costurero a través de la tabla anidada
+        if (filtros?.id_costurero) q = q.eq('produccion.id_costurero', filtros.id_costurero)
 
         q.then(({ data, error }) => {
             if (error) setError(error.message)
-            else setData((data as typeof data) ?? [])
+            else setData(data ?? [])
             setLoading(false)
         })
-    }, [filtros?.id_produccion, filtros?.tipo_pago, filtros?.desde, filtros?.hasta])
+    }, [filtros?.id_produccion, filtros?.tipo_pago, filtros?.desde, filtros?.hasta, filtros?.id_costurero])
 
     useEffect(() => { fetchAll() }, [fetchAll])
     return { data, loading, error, refetch: fetchAll }
@@ -271,4 +296,26 @@ export function useDashboardStats() {
     }, [])
 
     return { stats, loading }
+}
+
+export function useModeloFotos(id_modelo: number | null) {
+    const [data, setData] = useState<ModeloFoto[]>([])
+    const [loading, setLoading] = useState(false)
+
+    const fetch = useCallback(() => {
+        if (!id_modelo) return
+        setLoading(true)
+        supabase
+            .from('modelo_foto')
+            .select('*')
+            .eq('id_modelo', id_modelo)
+            .order('orden')
+            .then(({ data }) => {
+                setData(data ?? [])
+                setLoading(false)
+            })
+    }, [id_modelo])
+
+    useEffect(() => { fetch() }, [fetch])
+    return { data, loading, refetch: fetch }
 }

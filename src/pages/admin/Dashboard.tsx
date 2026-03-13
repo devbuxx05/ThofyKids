@@ -60,7 +60,7 @@ export default function Dashboard() {
                         </div>
                         <div>
                             <p className="text-xs text-text-muted uppercase tracking-wide">{label}</p>
-                            <p className="font-display text-xl font-bold text-accent mt-0.5">{value}</p>
+                            <p className={`font-display text-xl font-bold mt-0.5 ${color}`}>{value}</p>
                         </div>
                     </div>
                 ))}
@@ -102,7 +102,7 @@ export default function Dashboard() {
                                 ultimas5.map((p) => {
                                     const conf = estadoConfig[p.estado] ?? { label: p.estado, color: 'bg-text-muted/20 text-text-muted' }
                                     return (
-                                        <tr key={p.id_produccion} className="hover:bg-[#1F1F1F] transition-colors">
+                                        <tr key={p.id_produccion} className="hover:bg-bg-elevated transition-colors duration-200">
                                             <td className="px-6 py-4 font-medium text-text-primary">
                                                 {p.modelo?.nombre_modelo ?? `#${p.id_modelo}`}
                                             </td>

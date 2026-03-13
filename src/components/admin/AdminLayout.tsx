@@ -7,49 +7,51 @@ import {
 import { supabase } from '../../lib/supabase'
 
 const navItems = [
-    { to: '/admin/dashboard', icon: FiGrid, label: 'Dashboard' },
-    { to: '/admin/modelos', icon: FiPackage, label: 'Modelos' },
-    { to: '/admin/produccion', icon: FiTool, label: 'Producción' },
-    { to: '/admin/costureros', icon: FiUsers, label: 'Costureros' },
-    { to: '/admin/pagos', icon: FiCreditCard, label: 'Pagos' },
+    { to: '/admin/dashboard', icon: FiGrid,       label: 'Dashboard'   },
+    { to: '/admin/modelos',   icon: FiPackage,     label: 'Modelos'     },
+    { to: '/admin/produccion',icon: FiTool,        label: 'Producción'  },
+    { to: '/admin/costureros',icon: FiUsers,       label: 'Costureros'  },
+    { to: '/admin/pagos',     icon: FiCreditCard,  label: 'Pagos'       },
 ]
 
-export default function AdminLayout() {
-    const [sidebarOpen, setSidebarOpen] = useState(false)
-    const navigate = useNavigate()
+interface SidebarProps {
+    isMobile?: boolean
+    onClose: () => void
+    onLogout: () => void
+}
 
-    const handleLogout = async () => {
-        await supabase.auth.signOut()
-        navigate('/admin/login')
-    }
-
-    const Sidebar = ({ mobile = false }: { mobile?: boolean }) => (
-        <aside
-            className={`${mobile
-                ? 'fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-admin-bg shadow-2xl animate-slideIn'
-                : 'hidden lg:flex flex-col w-64 shrink-0 bg-admin-bg border-r border-border h-screen sticky top-0'
-            }`}
-        >
+function Sidebar({ isMobile = false, onClose, onLogout }: SidebarProps) {
+    return (
+        <aside className={
+            isMobile
+                ? 'fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-bg-surface shadow-2xl animate-slideIn'
+                : 'hidden lg:flex flex-col w-64 shrink-0 bg-bg-surface border-r border-border h-screen sticky top-0'
+        }>
+            {/* Logo */}
             <div className="px-5 py-5 border-b border-border flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <span className="font-display font-bold text-text-primary text-sm leading-none">
+                <div>
+                    <span className="font-display font-bold text-text-primary text-sm">
                         <span className="text-accent">T</span>hofy Kids
                     </span>
-                    <p className="text-[10px] text-text-muted mt-0.5 ml-1">Panel Admin</p>
+                    <p className="text-[10px] text-text-muted mt-0.5">Panel Admin</p>
                 </div>
-                {mobile && (
-                    <button onClick={() => setSidebarOpen(false)} className="p-1 text-text-muted hover:text-text-primary">
+                {isMobile && (
+                    <button
+                        onClick={onClose}
+                        className="p-1 text-text-muted hover:text-text-primary transition-colors duration-200"
+                    >
                         <FiX className="w-5 h-5" />
                     </button>
                 )}
             </div>
 
+            {/* Nav */}
             <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
                 {navItems.map(({ to, icon: Icon, label }) => (
                     <NavLink
                         key={to}
                         to={to}
-                        onClick={() => mobile && setSidebarOpen(false)}
+                        onClick={isMobile ? onClose : undefined}
                         className={({ isActive }) =>
                             `admin-sidebar-link ${isActive ? 'active' : ''}`
                         }
@@ -61,10 +63,11 @@ export default function AdminLayout() {
                 ))}
             </nav>
 
+            {/* Logout */}
             <div className="px-3 py-4 border-t border-border">
                 <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-[6px] text-sm font-medium text-danger hover:bg-danger/10 transition-all"
+                    onClick={onLogout}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-[6px] text-sm font-medium text-danger hover:bg-danger/10 transition-all duration-200"
                 >
                     <FiLogOut className="w-4 h-4" />
                     Cerrar Sesión
@@ -72,25 +75,44 @@ export default function AdminLayout() {
             </div>
         </aside>
     )
+}
+
+export default function AdminLayout() {
+    const [sidebarOpen, setSidebarOpen] = useState(false)
+    const navigate = useNavigate()
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut()
+        navigate('/admin/login')
+    }
 
     return (
         <div className="min-h-screen bg-bg flex">
-            <Sidebar />
 
+            {/* Sidebar Desktop */}
+            <Sidebar onClose={() => setSidebarOpen(false)} onLogout={handleLogout} />
+
+            {/* Overlay + Sidebar Mobile */}
             {sidebarOpen && (
-                <div
-                    className="fixed inset-0 z-40 bg-black/60 lg:hidden"
-                    onClick={() => setSidebarOpen(false)}
-                    aria-hidden
-                />
+                <>
+                    <div
+                        className="fixed inset-0 z-40 bg-black/60 lg:hidden backdrop-blur-sm"
+                        onClick={() => setSidebarOpen(false)}
+                        aria-hidden
+                    />
+                    <Sidebar
+                        isMobile
+                        onClose={() => setSidebarOpen(false)}
+                        onLogout={handleLogout}
+                    />
+                </>
             )}
 
-            {sidebarOpen && <Sidebar mobile />}
-
+            {/* Contenido principal */}
             <div className="flex-1 flex flex-col min-w-0">
-                <header className="bg-admin-bg border-b border-border px-4 sm:px-6 h-14 flex items-center gap-4 sticky top-0 z-30">
+                <header className="bg-bg-surface border-b border-border px-4 sm:px-6 h-14 flex items-center gap-4 sticky top-0 z-30 shadow-sm">
                     <button
-                        className="lg:hidden p-2 rounded-[6px] text-text-muted hover:text-text-primary hover:bg-surface"
+                        className="lg:hidden p-2 rounded-[6px] text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors duration-200"
                         onClick={() => setSidebarOpen(true)}
                         aria-label="Abrir menú"
                     >
@@ -98,10 +120,10 @@ export default function AdminLayout() {
                     </button>
                     <div className="flex-1" />
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-[6px] bg-accent/10 flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-[6px] bg-accent/10 flex items-center justify-center border border-accent/20">
                             <span className="text-accent font-bold text-xs">A</span>
                         </div>
-                        <span className="text-sm text-text-muted hidden sm:block">Admin</span>
+                        <span className="text-sm font-medium text-text-muted hidden sm:block">Admin</span>
                     </div>
                 </header>
 

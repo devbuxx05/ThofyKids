@@ -9,6 +9,14 @@ export interface Categoria {
     created_at?: string
 }
 
+export interface ModeloFoto {
+    id_foto: number
+    id_modelo: number
+    foto_url: string
+    orden: number
+    created_at?: string
+}
+
 export interface Modelo {
     id_modelo: number
     nombre_modelo: string
@@ -23,6 +31,7 @@ export interface Modelo {
     categoria?: Categoria
     colores?: ModeloColor[]
     tallas?: ModeloTalla[]
+    fotos?: ModeloFoto[]   // ← agregar
 }
 
 export interface Talla {
@@ -72,7 +81,7 @@ export interface Produccion {
     cantidad_entregada?: number
     cantidad_falladas?: number
     foto_referencial?: string
-    estado: 'PENDIENTE' | 'EN_PRODUCCION' | 'TERMINADO' | 'PAGADO'
+    estado: EstadoProduccion
     observacion?: string
     created_at?: string
     // Joined
@@ -84,10 +93,11 @@ export interface Produccion {
 export interface PagoProduccion {
     id_pago: number
     id_produccion: number
-    tipo_pago: 'EFECTIVO' | 'YAPE' | 'TRANSFERENCIA' | 'DEPOSITO'
+    tipo_pago: TipoPago
     monto: number
     fecha_pago: string
     detalle?: string
+    comprobante_url?: string  // ← vuelve a entrar
     created_at?: string
 }
 
@@ -101,8 +111,6 @@ export interface Usuario {
 export interface CartItem {
     id_modelo: number
     nombre: string
-    talla: string
-    color: string
     foto_url: string
     precio: number
     cantidad: number

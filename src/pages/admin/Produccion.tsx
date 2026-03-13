@@ -1,222 +1,323 @@
 import { useState } from 'react'
-import { FiPlus, FiEye, FiChevronDown, FiDollarSign } from 'react-icons/fi'
-import AdminModal from '../../components/admin/AdminModal'
-import { useProducciones, useCostureros, useModelosAdmin } from '../../hooks/useSupabase'
+import { FiPlus, FiDollarSign, FiEye, FiUpload, FiX, FiCheck, FiTrash2 } from 'react-icons/fi'
+import { AdminModal } from '../../components/admin/AdminModal'
+import { useProducciones, useModelosAdmin, useCostureros } from '../../hooks/useSupabase'
 import { supabase } from '../../lib/supabase'
-import type { EstadoProduccion, TipoPago, ProduccionConDeuda, PagoProduccion } from '../../types'
+import type { ProduccionConDeuda } from '../../types'
 
-const ESTADOS: EstadoProduccion[] = ['PENDIENTE', 'EN_PRODUCCION', 'TERMINADO', 'PAGADO']
-const TIPOS_PAGO: TipoPago[] = ['EFECTIVO', 'YAPE', 'TRANSFERENCIA', 'DEPOSITO']
-
-const estadoConfig: Record<string, { label: string; color: string }> = {
-    PENDIENTE: { label: 'Pendiente', color: 'bg-text-muted/20 text-text-muted' },
-    EN_PRODUCCION: { label: 'En Producción', color: 'bg-blue-500/20 text-blue-400' },
-    TERMINADO: { label: 'Terminado', color: 'bg-green-500/20 text-green-400' },
-    PAGADO: { label: 'Pagado', color: 'bg-accent/20 text-accent' },
-}
-
-const tipoBadge: Record<string, string> = {
-    EFECTIVO: 'bg-green-500/20 text-green-400',
-    YAPE: 'bg-purple-500/20 text-purple-400',
-    TRANSFERENCIA: 'bg-blue-500/20 text-blue-400',
-    DEPOSITO: 'bg-orange-500/20 text-orange-400',
-}
-
-type Mode = 'list' | 'detail'
-
-const emptyProd = {
+const emptyForm = {
     id_modelo: '',
     id_costurero: '',
-    fecha_inicio: new Date().toISOString().split('T')[0],
-    fecha_termino: '',
     cantidad_prendas: '',
     precio_costura: '',
-    cantidad_entregada: '',
+    fecha_inicio: new Date().toISOString().split('T')[0],
+}
+
+const emptyPago = {
+    tipo_pago: 'TRANSFERENCIA',
+    monto: '',
+    detalle: '',
+    fecha_pago: new Date().toISOString().split('T')[0],
+}
+
+const emptyDetalles = {
+    estado: 'EN_PRODUCCION',
     cantidad_falladas: '',
-    foto_referencial: '',
-    estado: 'PENDIENTE' as EstadoProduccion,
+    fecha_termino: '',
     observacion: '',
 }
 
 export default function Produccion() {
-    const [mode, setMode] = useState<Mode>('list')
-    const [showCreateModal, setShowCreateModal] = useState(false)
-    const [selected, setSelected] = useState<ProduccionConDeuda | null>(null)
-    const [filtroEstado, setFiltroEstado] = useState('')
-    const [filtroCosturero, setFiltroCosturero] = useState<number | undefined>()
-    const [form, setForm] = useState(emptyProd)
+    const { data: producciones, loading, refetch } = useProducciones()
+    const { data: cortes } = useModelosAdmin()
+    const { data: costureros } = useCostureros()
+
+    const [showCreate, setShowCreate] = useState(false)
+    const [showPago, setShowPago] = useState(false)
+    const [showDetalles, setShowDetalles] = useState(false)
+
+    const [form, setForm] = useState(emptyForm)
+    const [pagoForm, setPagoForm] = useState(emptyPago)
+    const [detallesForm, setDetallesForm] = useState(emptyDetalles)
+    const [comprobanteFile, setComprobanteFile] = useState<File | null>(null)
+
+    const [selectedProd, setSelectedProd] = useState<ProduccionConDeuda | null>(null)
     const [saving, setSaving] = useState(false)
-    const [formError, setFormError] = useState('')
+    const [errorMsg, setErrorMsg] = useState('')
 
-    // Payment modal
-    const [showPagoModal, setShowPagoModal] = useState(false)
-    const [pagoForm, setPagoForm] = useState({ tipo_pago: 'EFECTIVO' as TipoPago, monto: '', fecha_pago: new Date().toISOString().split('T')[0], detalle: '' })
-    const [savingPago, setSavingPago] = useState(false)
-
-    const { data: producciones, loading, error, refetch } = useProducciones({
-        estado: filtroEstado || undefined,
-        id_costurero: filtroCosturero,
-    })
-    const { data: costureros } = useCostureros(true)
-    const { data: modelos } = useModelosAdmin()
-
-    const handleView = (p: ProduccionConDeuda) => {
-        setSelected(p)
-        setMode('detail')
-    }
-
+    // --- CREAR ---
     const handleCreate = async () => {
-        if (!form.id_modelo || !form.id_costurero || !form.fecha_inicio || !form.cantidad_prendas || !form.precio_costura) {
-            setFormError('Modelo, costurero, fecha inicio, cantidad y precio son obligatorios.')
+        if (!form.id_modelo || !form.id_costurero || !form.cantidad_prendas || !form.precio_costura) {
+            setErrorMsg('Por favor completa todos los campos obligatorios.')
             return
         }
+
+        // Verificar que el corte no esté ocupado
+        const { data: existe } = await supabase
+            .from('produccion')
+            .select('id_produccion')
+            .eq('id_modelo', Number(form.id_modelo))
+            .in('estado', ['PENDIENTE', 'EN_PRODUCCION'])
+            .maybeSingle()
+
+        if (existe) {
+            setErrorMsg('Este corte ya tiene una producción activa (Pendiente o En Producción). Espera a que termine antes de asignarlo de nuevo.')
+            return
+        }
+
         setSaving(true)
-        setFormError('')
-        const { error } = await supabase.from('produccion').insert({
-            id_modelo: Number(form.id_modelo),
-            id_costurero: Number(form.id_costurero),
-            fecha_inicio: form.fecha_inicio,
-            fecha_termino: form.fecha_termino || null,
-            cantidad_prendas: Number(form.cantidad_prendas),
-            precio_costura: Number(form.precio_costura),
-            cantidad_entregada: form.cantidad_entregada ? Number(form.cantidad_entregada) : null,
-            cantidad_falladas: form.cantidad_falladas ? Number(form.cantidad_falladas) : null,
-            foto_referencial: form.foto_referencial || null,
-            estado: form.estado,
-            observacion: form.observacion || null,
-        })
-        setSaving(false)
-        if (error) { setFormError(error.message); return }
-        setShowCreateModal(false)
-        setForm(emptyProd)
-        refetch()
-    }
-
-    const handleChangeEstado = async (p: ProduccionConDeuda, nuevoEstado: EstadoProduccion) => {
-    // 1. Validar si ya está en ese estado para no hacer renders en vano
-    if (p.estado === nuevoEstado) return;
-
-    // 2. Guardamos el estado original por si la API falla
-    const estadoOriginal = p.estado;
-
-    // 3. ACTUALIZACIÓN OPTIMISTA (Instantánea en la UI)
-    if (selected?.id_produccion === p.id_produccion) {
-        setSelected({ ...p, estado: nuevoEstado });
-    }
-    // Truco: No uses refetch de inmediato, mejor actualiza la cache/estado local de "producciones" 
-    // si es posible, o llama la API silenciosamente.
-
-    // 4. Llamada a base de datos
-    const { error } = await supabase.from('produccion').update({ estado: nuevoEstado }).eq('id_produccion', p.id_produccion)
-    
-    if (error) {
-        alert("Error al cambiar de estado");
-        // Revertimos si falla
-        if (selected?.id_produccion === p.id_produccion) {
-            setSelected({ ...p, estado: estadoOriginal });
+        setErrorMsg('')
+        try {
+            const { error } = await supabase.from('produccion').insert([{
+                id_modelo: Number(form.id_modelo),
+                id_costurero: Number(form.id_costurero),
+                cantidad_prendas: Number(form.cantidad_prendas),
+                precio_costura: Number(form.precio_costura),
+                fecha_inicio: form.fecha_inicio,
+                estado: 'EN_PRODUCCION',
+            }])
+            if (error) throw error
+            setShowCreate(false)
+            setForm(emptyForm)
+            refetch()
+        } catch (err) {
+            setErrorMsg(err instanceof Error ? err.message : 'Error al crear la producción')
+        } finally {
+            setSaving(false)
         }
-        refetch(); 
-    } else {
-        refetch(); // Sincroniza en background
     }
-}
 
-    const handleRegisterPago = async () => {
-        if (!pagoForm.monto || Number(pagoForm.monto) <= 0) {
+    //ELIMINAR
+    const handleDelete = async (p: ProduccionConDeuda) => {
+    if (!window.confirm(`¿Eliminar la producción de "${p.modelo?.nombre_modelo}"? Esta acción no se puede deshacer.`)) return
+
+    // Verificar si tiene pagos
+        const { data: pagos } = await supabase
+            .from('pago_produccion')
+            .select('id_pago')
+            .eq('id_produccion', p.id_produccion)
+            .limit(1)
+
+        if (pagos && pagos.length > 0) {
+            alert('No puedes eliminar esta producción porque ya tiene pagos registrados.')
             return
         }
-        setSavingPago(true)
-        await supabase.from('pago_produccion').insert({
-            id_produccion: selected!.id_produccion,
-            tipo_pago: pagoForm.tipo_pago,
-            monto: Number(pagoForm.monto),
-            fecha_pago: pagoForm.fecha_pago,
-            detalle: pagoForm.detalle || null,
-        })
-        setSavingPago(false)
-        setShowPagoModal(false)
-        setPagoForm({ tipo_pago: 'EFECTIVO', monto: '', fecha_pago: new Date().toISOString().split('T')[0], detalle: '' })
-        refetch()
-        // Refresh selected
-        const updated = producciones.find((p) => p.id_produccion === selected!.id_produccion)
-        if (updated) {
-            // Re-fetch to get updated pagos
-            setTimeout(() => { refetch() }, 300)
+
+        const { error } = await supabase
+            .from('produccion')
+            .delete()
+            .eq('id_produccion', p.id_produccion)
+
+        if (error) {
+            alert('Error al eliminar: ' + error.message)
+        } else {
+            refetch()
         }
     }
 
-    // ── List view ────────────────────────────────────────────
-    if (mode === 'list') return (
+    // --- PAGO ---
+    const handleSavePago = async () => {
+        if (!pagoForm.monto || Number(pagoForm.monto) <= 0) {
+            setErrorMsg('El monto debe ser mayor a 0.')
+            return
+        }
+        if (!selectedProd) return
+        setSaving(true)
+        setErrorMsg('')
+        try {
+            let comprobante_url = null
+            if (comprobanteFile) {
+                const ext = comprobanteFile.name.split('.').pop()
+                const fileName = `comprobantes/pago_${Date.now()}.${ext}`
+                const { error: upErr } = await supabase.storage
+                    .from('fotos')
+                    .upload(fileName, comprobanteFile)
+                if (upErr) throw new Error(`Error subiendo comprobante: ${upErr.message}`)
+                const { data } = supabase.storage.from('fotos').getPublicUrl(fileName)
+                comprobante_url = data.publicUrl
+            }
+
+            const { error } = await supabase.from('pago_produccion').insert([{
+                id_produccion: selectedProd.id_produccion,
+                tipo_pago: pagoForm.tipo_pago,
+                monto: Number(pagoForm.monto),
+                fecha_pago: pagoForm.fecha_pago,
+                detalle: pagoForm.detalle,
+                comprobante_url,
+            }])
+            if (error) throw error
+
+            setShowPago(false)
+            setPagoForm(emptyPago)
+            setComprobanteFile(null)
+            refetch()
+        } catch (err) {
+            setErrorMsg(err instanceof Error ? err.message : 'Error al procesar el pago')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    // --- DETALLES ---
+    const handleSaveDetalles = async () => {
+        if (!selectedProd) return
+        setSaving(true)
+        setErrorMsg('')
+        try {
+            const { error } = await supabase
+                .from('produccion')
+                .update({
+                    estado: detallesForm.estado,
+                    cantidad_falladas: Number(detallesForm.cantidad_falladas) || 0,
+                    observacion: detallesForm.observacion,
+                    fecha_termino: detallesForm.fecha_termino || null,
+                })
+                .eq('id_produccion', selectedProd.id_produccion)
+            if (error) throw error
+            setShowDetalles(false)
+            refetch()
+        } catch (err) {
+            setErrorMsg(err instanceof Error ? err.message : 'Error al guardar los detalles')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    // --- ABRIR MODALES ---
+    const openPagoModal = (prod: ProduccionConDeuda) => {
+        setSelectedProd(prod)
+        setPagoForm(emptyPago)
+        setComprobanteFile(null)
+        setErrorMsg('')
+        setShowPago(true)
+    }
+
+    const openDetallesModal = (prod: ProduccionConDeuda) => {
+        setSelectedProd(prod)
+        setDetallesForm({
+            estado: prod.estado,
+            cantidad_falladas: String(prod.cantidad_falladas ?? ''),
+            fecha_termino: prod.fecha_termino ?? '',
+            observacion: prod.observacion ?? '',
+        })
+        setErrorMsg('')
+        setShowDetalles(true)
+    }
+
+    const estadoBadge = (estado: string) => {
+        const map: Record<string, string> = {
+            PENDIENTE:      'bg-border text-text-muted',
+            EN_PRODUCCION:  'bg-blue-500/20 text-blue-400',
+            TERMINADO:      'bg-accent/20 text-accent',
+            PAGADO:         'bg-green-500/20 text-green-400',
+        }
+        const labels: Record<string, string> = {
+            PENDIENTE:     'Pendiente',
+            EN_PRODUCCION: 'En Producción',
+            TERMINADO:     'Terminado',
+            PAGADO:        'Pagado',
+        }
+        return { color: map[estado] ?? 'bg-border text-text-muted', label: labels[estado] ?? estado }
+    }
+
+    return (
         <div className="space-y-6 animate-fadeIn">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="font-display text-2xl font-bold text-text-primary">Producción</h1>
-                    <p className="text-text-muted text-sm mt-1">Seguimiento de órdenes de producción</p>
+                    <p className="text-text-muted text-sm mt-1">Gestión de cortes, costureros y estados</p>
                 </div>
-                <button onClick={() => setShowCreateModal(true)} className="btn-primary"><FiPlus className="w-4 h-4" /> Nueva Producción</button>
+                <button
+                    onClick={() => { setForm(emptyForm); setErrorMsg(''); setShowCreate(true) }}
+                    className="btn-primary"
+                >
+                    <FiPlus className="w-4 h-4" /> Nueva Producción
+                </button>
             </div>
 
-            {/* Filters */}
-            <div className="flex gap-3 flex-wrap">
-                <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} className="input-field w-auto">
-                    <option value="">Todos los estados</option>
-                    {ESTADOS.map((s) => <option key={s} value={s}>{estadoConfig[s].label}</option>)}
-                </select>
-                <select value={filtroCosturero ?? ''} onChange={(e) => setFiltroCosturero(e.target.value ? Number(e.target.value) : undefined)} className="input-field w-auto">
-                    <option value="">Todos los costureros</option>
-                    {costureros.map((c) => <option key={c.id_costurero} value={c.id_costurero}>{c.nombre}</option>)}
-                </select>
-            </div>
-
-            {error && <p className="text-danger text-sm">{error}</p>}
-
+            {/* TABLA */}
             <div className="card overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-bg text-xs text-text-muted uppercase tracking-wider">
-                                <th className="px-6 py-3 text-left">Modelo</th>
+                                <th className="px-6 py-3 text-left">Corte / Modelo</th>
                                 <th className="px-6 py-3 text-left">Costurero</th>
-                                <th className="px-6 py-3 text-left">Fecha Inicio</th>
                                 <th className="px-6 py-3 text-center">Cant.</th>
-                                <th className="px-6 py-3 text-left">Estado</th>
-                                <th className="px-6 py-3 text-right">Total</th>
+                                <th className="px-6 py-3 text-right">Costo Total</th>
                                 <th className="px-6 py-3 text-right">Deuda</th>
-                                <th className="px-6 py-3 text-right">Ver</th>
+                                <th className="px-6 py-3 text-center">Estado</th>
+                                <th className="px-6 py-3 text-right">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
                             {loading ? (
-                                Array.from({ length: 5 }).map((_, i) => <tr key={i}>{Array.from({ length: 8 }).map((_, j) => <td key={j} className="px-6 py-4"><div className="skeleton h-4 w-16 rounded" /></td>)}</tr>)
+                                Array.from({ length: 4 }).map((_, i) => (
+                                    <tr key={i}>
+                                        {Array.from({ length: 7 }).map((_, j) => (
+                                            <td key={j} className="px-6 py-4">
+                                                <div className="skeleton h-4 w-20 rounded" />
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))
                             ) : producciones.length === 0 ? (
-                                <tr><td colSpan={8} className="px-6 py-8 text-center text-text-muted">No hay producciones registradas</td></tr>
+                                <tr>
+                                    <td colSpan={7} className="px-6 py-8 text-center text-text-muted">
+                                        No hay producciones registradas
+                                    </td>
+                                </tr>
                             ) : producciones.map((p) => {
-                                const conf = estadoConfig[p.estado]
+                                const { color, label } = estadoBadge(p.estado)
                                 return (
-                                    <tr key={p.id_produccion} className="hover:bg-[#1F1F1F] transition-colors">
-                                        <td className="px-6 py-4 font-medium text-text-primary whitespace-nowrap">{p.modelo?.nombre_modelo ?? `#${p.id_modelo}`}</td>
-                                        <td className="px-6 py-4 text-text-muted">{p.costurero?.nombre ?? '—'}</td>
-                                        <td className="px-6 py-4 text-text-muted whitespace-nowrap">{new Date(p.fecha_inicio).toLocaleDateString('es-PE')}</td>
-                                        <td className="px-6 py-4 text-center text-text-muted">{p.cantidad_prendas}</td>
-                                        <td className="px-6 py-4">
-                                            <div className="relative">
-                                                <select
-                                                    value={p.estado}
-                                                    onChange={(e) => handleChangeEstado(p, e.target.value as EstadoProduccion)}
-                                                    className={`badge pr-6 appearance-none cursor-pointer ${conf.color}`}
-                                                    style={{ paddingRight: '1.5rem' }}
-                                                >
-                                                    {ESTADOS.map((s) => <option key={s} value={s}>{estadoConfig[s].label}</option>)}
-                                                </select>
-                                                <FiChevronDown className="absolute right-1 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
-                                            </div>
+                                    <tr key={p.id_produccion} className="hover:bg-bg-elevated transition-colors duration-200">
+                                        <td className="px-6 py-4 font-medium text-text-primary">
+                                            {p.modelo?.nombre_modelo ?? `#${p.id_modelo}`}
                                         </td>
-                                        <td className="px-6 py-4 text-right font-medium font-mono text-text-primary">S/. {p.total_produccion.toFixed(2)}</td>
-                                        <td className={`px-6 py-4 text-right font-bold font-mono ${p.deuda > 0 ? 'text-danger' : 'text-success'}`}>S/. {p.deuda.toFixed(2)}</td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button onClick={() => handleView(p)} className="p-1.5 text-text-muted hover:text-accent hover:bg-accent/10 rounded-lg transition-colors">
-                                                <FiEye className="w-4 h-4" />
-                                            </button>
+                                        <td className="px-6 py-4 text-text-muted">
+                                            {p.costurero?.nombre ?? `#${p.id_costurero}`}
+                                        </td>
+                                        <td className="px-6 py-4 text-center font-mono text-text-primary">
+                                            {p.cantidad_prendas}
+                                        </td>
+                                        <td className="px-6 py-4 text-right font-mono text-text-primary">
+                                            S/. {p.total_produccion.toFixed(2)}
+                                        </td>
+                                        <td className="px-6 py-4 text-right font-mono font-bold">
+                                            {p.deuda > 0
+                                                ? <span className="text-danger">S/. {p.deuda.toFixed(2)}</span>
+                                                : <span className="text-success">Pagado</span>
+                                            }
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className={`badge ${color}`}>{label}</span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => openDetallesModal(p)}
+                                                    className="p-1.5 text-text-muted hover:text-accent hover:bg-accent/10 rounded-[6px] transition-colors duration-200"
+                                                    title="Ver y editar detalles"
+                                                >
+                                                    <FiEye className="w-4 h-4" />
+                                                </button>
+                                                {p.deuda > 0 && (
+                                                    <button
+                                                        onClick={() => openPagoModal(p)}
+                                                        className="p-1.5 text-text-muted hover:text-success hover:bg-success/10 rounded-[6px] transition-colors duration-200"
+                                                        title="Registrar pago"
+                                                    >
+                                                        <FiDollarSign className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => handleDelete(p)}
+                                                    className="p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 rounded-[6px] transition-colors duration-200"
+                                                    title="Eliminar producción"
+                                                >
+                                                    <FiTrash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 )
@@ -226,240 +327,198 @@ export default function Produccion() {
                 </div>
             </div>
 
-            {/* Modal Nueva Producción */}
+            {/* MODAL 1: NUEVA PRODUCCIÓN */}
             <AdminModal
-                isOpen={showCreateModal}
-                onClose={() => { setShowCreateModal(false); setForm(emptyProd); setFormError('') }}
+                isOpen={showCreate}
+                onClose={() => setShowCreate(false)}
                 title="Nueva Producción"
-                maxWidth="lg"
+                maxWidth="md"
                 footer={
                     <>
-                        <button onClick={() => { setShowCreateModal(false); setForm(emptyProd) }} className="btn-secondary text-sm py-2">
-                            Cancelar
-                        </button>
-                        <button onClick={handleCreate} disabled={saving} className="btn-primary text-sm py-2 flex items-center gap-2">
+                        <button onClick={() => setShowCreate(false)} className="btn-secondary text-sm">Cancelar</button>
+                        <button onClick={handleCreate} disabled={saving} className="btn-primary text-sm">
                             {saving ? <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : 'Crear Producción'}
                         </button>
                     </>
                 }
             >
-                {formError && (
-                    <div className="bg-danger/10 border border-danger/30 text-danger text-sm rounded-[6px] px-4 py-3">
-                        <p>{formError}</p>
-                    </div>
-                )}
-
-                {/* Selects */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {errorMsg && <div className="text-danger text-sm mb-4 bg-danger/10 p-3 rounded-[6px]">{errorMsg}</div>}
+                <div className="space-y-4">
                     <div>
-                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Modelo *</label>
-                        <select value={form.id_modelo} onChange={(e) => setForm((f) => ({ ...f, id_modelo: e.target.value }))} className="input-field">
-                            <option value="">Seleccionar modelo</option>
-                            {modelos.map((m) => <option key={m.id_modelo} value={m.id_modelo}>{m.nombre_modelo}</option>)}
+                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Corte *</label>
+                        <select value={form.id_modelo} onChange={e => setForm({ ...form, id_modelo: e.target.value })} className="input-field">
+                            <option value="">Seleccionar corte...</option>
+                            {cortes.filter(c => c.activo).map(c => (
+                                <option key={c.id_modelo} value={c.id_modelo}>{c.nombre_modelo}</option>
+                            ))}
                         </select>
                     </div>
-
                     <div>
                         <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Costurero *</label>
-                        <select value={form.id_costurero} onChange={(e) => setForm((f) => ({ ...f, id_costurero: e.target.value }))} className="input-field">
-                            <option value="">Seleccionar costurero</option>
-                            {costureros.map((c) => <option key={c.id_costurero} value={c.id_costurero}>{c.nombre}</option>)}
+                        <select value={form.id_costurero} onChange={e => setForm({ ...form, id_costurero: e.target.value })} className="input-field">
+                            <option value="">Seleccionar costurero...</option>
+                            {costureros.filter(c => c.activo).map(c => (
+                                <option key={c.id_costurero} value={c.id_costurero}>{c.nombre}</option>
+                            ))}
                         </select>
                     </div>
-                </div>
-
-                {/* Dates */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {[
-                        { field: 'fecha_inicio', label: 'Fecha Inicio *', type: 'date' },
-                        { field: 'fecha_termino', label: 'Fecha Término', type: 'date' },
-                    ].map(({ field, label, type }) => (
-                        <div key={field}>
-                            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{label}</label>
-                            <input type={type} value={(form as Record<string, unknown>)[field] as string} onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))} className="input-field" />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Cantidad *</label>
+                            <input type="number" value={form.cantidad_prendas} onChange={e => setForm({ ...form, cantidad_prendas: e.target.value })} className="input-field" placeholder="100" />
                         </div>
-                    ))}
-                </div>
-
-                {/* Quantities and prices */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {[
-                        { field: 'cantidad_prendas', label: 'Cantidad de Prendas *', type: 'number' },
-                        { field: 'precio_costura', label: 'Precio Costura (S/.) *', type: 'number' },
-                        { field: 'cantidad_entregada', label: 'Cantidad Entregada', type: 'number' },
-                        { field: 'cantidad_falladas', label: 'Cantidad Falladas', type: 'number' },
-                    ].map(({ field, label, type }) => (
-                        <div key={field}>
-                            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{label}</label>
-                            <input type={type} value={(form as Record<string, unknown>)[field] as string} onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))} className="input-field" min="0" step={field === 'precio_costura' ? '0.01' : '1'} />
+                        <div>
+                            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Precio costura c/u *</label>
+                            <input type="number" step="0.10" value={form.precio_costura} onChange={e => setForm({ ...form, precio_costura: e.target.value })} className="input-field" placeholder="4.50" />
                         </div>
-                    ))}
-                </div>
-
-                {/* Estado */}
-                <div>
-                    <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Estado Inicial</label>
-                    <select value={form.estado} onChange={(e) => setForm((f) => ({ ...f, estado: e.target.value as EstadoProduccion }))} className="input-field">
-                        {ESTADOS.map((s) => <option key={s} value={s}>{estadoConfig[s].label}</option>)}
-                    </select>
-                </div>
-
-                {/* Observación */}
-                <div>
-                    <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Observaciones</label>
-                    <textarea value={form.observacion} onChange={(e) => setForm((f) => ({ ...f, observacion: e.target.value }))} rows={3} className="input-field resize-none" placeholder="Notas adicionales..." />
-                </div>
-
-                {/* Summary */}
-                {form.cantidad_prendas && form.precio_costura && (
-                    <div className="bg-accent/10 border border-accent/20 rounded-[6px] p-4 flex items-center justify-between">
-                        <span className="text-sm font-semibold text-text-muted">Total estimado:</span>
-                        <span className="text-lg font-bold font-mono text-accent">S/. {(Number(form.cantidad_prendas) * Number(form.precio_costura)).toFixed(2)}</span>
                     </div>
-                )}
+                    <div>
+                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Fecha inicio</label>
+                        <input type="date" value={form.fecha_inicio} onChange={e => setForm({ ...form, fecha_inicio: e.target.value })} className="input-field" />
+                    </div>
+                </div>
+            </AdminModal>
+
+            {/* MODAL 2: REGISTRAR PAGO */}
+            <AdminModal
+                isOpen={showPago}
+                onClose={() => setShowPago(false)}
+                title={`Registrar Pago — ${selectedProd?.costurero?.nombre}`}
+                maxWidth="sm"
+                footer={
+                    <>
+                        <button onClick={() => setShowPago(false)} className="btn-secondary text-sm">Cancelar</button>
+                        <button onClick={handleSavePago} disabled={saving} className="w-full bg-success hover:bg-success/90 text-white font-bold px-4 py-2 rounded-[6px] text-sm transition-colors">
+                            {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto block" /> : 'Confirmar Pago'}
+                        </button>
+                    </>
+                }
+            >
+                {errorMsg && <div className="text-danger text-sm mb-4 bg-danger/10 p-3 rounded-[6px]">{errorMsg}</div>}
+
+                <div className="bg-bg border border-border rounded-[6px] p-4 mb-4 flex justify-between items-center">
+                    <div>
+                        <p className="text-xs text-text-muted uppercase tracking-wide">Deuda actual</p>
+                        <p className="text-2xl font-bold text-danger font-mono">
+                            S/. {selectedProd?.deuda.toFixed(2)}
+                        </p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-xs text-text-muted uppercase tracking-wide">Prendas</p>
+                        <p className="font-bold text-text-primary font-mono">{selectedProd?.cantidad_prendas}</p>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Fecha del pago *</label>
+                        <input type="date" value={pagoForm.fecha_pago} onChange={e => setPagoForm({ ...pagoForm, fecha_pago: e.target.value })} className="input-field" />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Monto (S/.) *</label>
+                        <input type="number" step="0.10" value={pagoForm.monto} onChange={e => setPagoForm({ ...pagoForm, monto: e.target.value })} className="input-field text-lg font-bold" autoFocus />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Método de pago</label>
+                        <select value={pagoForm.tipo_pago} onChange={e => setPagoForm({ ...pagoForm, tipo_pago: e.target.value })} className="input-field">
+                            <option value="EFECTIVO">Efectivo</option>
+                            <option value="YAPE">Yape / Plin</option>
+                            <option value="TRANSFERENCIA">Transferencia</option>
+                            <option value="DEPOSITO">Depósito</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Detalle (opcional)</label>
+                        <textarea value={pagoForm.detalle} onChange={e => setPagoForm({ ...pagoForm, detalle: e.target.value })} rows={2} className="input-field resize-none" placeholder="Adelanto, Nro. de operación..." />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Comprobante (opcional)</label>
+                        <label className="flex items-center justify-center gap-2 border-2 border-dashed border-border rounded-[6px] p-4 hover:border-accent hover:bg-accent/5 cursor-pointer transition-colors group">
+                            {comprobanteFile ? (
+                                <><FiCheck className="text-success w-5 h-5" /><span className="text-sm text-text-primary truncate">{comprobanteFile.name}</span></>
+                            ) : (
+                                <><FiUpload className="text-text-muted group-hover:text-accent w-5 h-5" /><span className="text-sm text-text-muted group-hover:text-accent">Subir imagen</span></>
+                            )}
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => setComprobanteFile(e.target.files?.[0] || null)} />
+                        </label>
+                        {comprobanteFile && (
+                            <button onClick={() => setComprobanteFile(null)} className="mt-2 text-xs text-danger hover:underline flex items-center gap-1">
+                                <FiX className="w-3 h-3" /> Quitar archivo
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </AdminModal>
+
+            {/* MODAL 3: DETALLES */}
+            <AdminModal
+                isOpen={showDetalles}
+                onClose={() => setShowDetalles(false)}
+                title={`Detalles — ${selectedProd?.modelo?.nombre_modelo}`}
+                maxWidth="sm"
+                footer={
+                    <>
+                        <button onClick={() => setShowDetalles(false)} className="btn-secondary text-sm">Cerrar</button>
+                        <button onClick={handleSaveDetalles} disabled={saving} className="btn-primary text-sm">
+                            {saving ? <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : 'Guardar Cambios'}
+                        </button>
+                    </>
+                }
+            >
+                {errorMsg && <div className="text-danger text-sm mb-4 bg-danger/10 p-3 rounded-[6px]">{errorMsg}</div>}
+
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3 bg-bg border border-border rounded-[6px] p-3">
+                        <div>
+                            <p className="text-xs text-text-muted uppercase tracking-wide">Costurero</p>
+                            <p className="text-sm font-bold text-text-primary">{selectedProd?.costurero?.nombre}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-text-muted uppercase tracking-wide">Prendas</p>
+                            <p className="text-sm font-bold text-text-primary font-mono">{selectedProd?.cantidad_prendas}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-text-muted uppercase tracking-wide">Costo total</p>
+                            <p className="text-sm font-bold text-accent font-mono">S/. {selectedProd?.total_produccion.toFixed(2)}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-text-muted uppercase tracking-wide">Fecha inicio</p>
+                            <p className="text-sm font-bold text-text-primary">
+                                {selectedProd?.fecha_inicio
+                                    ? new Date(selectedProd.fecha_inicio + 'T00:00:00').toLocaleDateString('es-PE')
+                                    : '—'
+                                }
+                            </p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Estado</label>
+                        <select value={detallesForm.estado} onChange={e => setDetallesForm({ ...detallesForm, estado: e.target.value })} className="input-field">
+                            <option value="PENDIENTE">Pendiente</option>
+                            <option value="EN_PRODUCCION">En Producción</option>
+                            <option value="TERMINADO">Terminado</option>
+                            <option value="PAGADO">Pagado</option>
+                        </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Prendas falladas</label>
+                            <input type="number" min="0" value={detallesForm.cantidad_falladas} onChange={e => setDetallesForm({ ...detallesForm, cantidad_falladas: e.target.value })} className="input-field" placeholder="0" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Fecha entrega</label>
+                            <input type="date" value={detallesForm.fecha_termino} onChange={e => setDetallesForm({ ...detallesForm, fecha_termino: e.target.value })} className="input-field" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Observaciones</label>
+                        <textarea value={detallesForm.observacion} onChange={e => setDetallesForm({ ...detallesForm, observacion: e.target.value })} rows={3} className="input-field resize-none" placeholder="Faltan botones, tela manchada..." />
+                    </div>
+                </div>
             </AdminModal>
         </div>
     )
-
-    // ── Detail view ──────────────────────────────────────────
-    if (mode === 'detail' && selected) {
-        const conf = estadoConfig[selected.estado]
-        return (
-            <div className="space-y-6 animate-fadeIn">
-                <div className="flex items-center gap-3 flex-wrap">
-                    <button onClick={() => { setMode('list'); refetch() }} className="text-text-muted hover:text-text-primary text-sm">← Volver</button>
-                    <h1 className="font-display text-2xl font-bold text-text-primary">{selected.modelo?.nombre_modelo ?? `Producción #${selected.id_produccion}`}</h1>
-                    <span className={`badge ${conf.color}`}>{conf.label}</span>
-                </div>
-
-                <div className="grid lg:grid-cols-2 gap-6">
-                    {/* Info card */}
-                    <div className="card p-6 space-y-3">
-                        <h2 className="font-display font-semibold text-text-primary mb-4">Información</h2>
-                        {[
-                            { label: 'Costurero', value: selected.costurero?.nombre ?? '—' },
-                            { label: 'Fecha Inicio', value: new Date(selected.fecha_inicio).toLocaleDateString('es-PE') },
-                            { label: 'Fecha Término', value: selected.fecha_termino ? new Date(selected.fecha_termino).toLocaleDateString('es-PE') : '—' },
-                            { label: 'Cantidad de Prendas', value: selected.cantidad_prendas.toString() },
-                            { label: 'Precio por Prenda', value: `S/. ${selected.precio_costura.toFixed(2)}` },
-                            { label: 'Entregadas', value: selected.cantidad_entregada?.toString() ?? '—' },
-                            { label: 'Falladas', value: selected.cantidad_falladas?.toString() ?? '—' },
-                        ].map(({ label, value }) => (
-                            <div key={label} className="flex justify-between text-sm border-b border-border pb-2">
-                                <span className="text-text-muted">{label}</span>
-                                <span className="font-medium text-text-primary">{value}</span>
-                            </div>
-                        ))}
-                        {selected.observacion && (
-                            <div className="bg-surface rounded-lg p-3 text-sm text-text-muted">{selected.observacion}</div>
-                        )}
-                        <div>
-                            <label className="block text-xs font-semibold text-text-muted mb-1">Cambiar Estado</label>
-                            <select value={selected.estado} onChange={(e) => handleChangeEstado(selected, e.target.value as EstadoProduccion)} className="input-field">
-                                {ESTADOS.map((s) => <option key={s} value={s}>{estadoConfig[s].label}</option>)}
-                            </select>
-                        </div>
-                    </div>
-
-                    {/* Financial card */}
-                    <div className="card p-6">
-                        <h2 className="font-display font-semibold text-text-primary mb-4">Resumen Financiero</h2>
-                        <div className="space-y-2 mb-6">
-                            <div className="flex justify-between text-sm"><span className="text-text-muted">Total producción</span><span className="font-bold">S/. {selected.total_produccion.toFixed(2)}</span></div>
-                            <div className="flex justify-between text-sm"><span className="text-text-muted">Total pagado</span><span className="font-bold text-success">S/. {selected.total_pagado.toFixed(2)}</span></div>
-                            <div className="h-px bg-border my-2" />
-                            <div className="flex justify-between text-base font-bold">
-                                <span>Deuda pendiente</span>
-                                <span className={selected.deuda > 0 ? 'text-danger' : 'text-success'}>S/. {selected.deuda.toFixed(2)}</span>
-                            </div>
-                        </div>
-                        {selected.deuda > 0 && (
-                            <button onClick={() => setShowPagoModal(true)} className="btn-primary w-full text-sm">
-                                <FiDollarSign className="w-4 h-4" /> Registrar Pago
-                            </button>
-                        )}
-                    </div>
-                </div>
-
-                {/* Payment history */}
-                <div className="card overflow-hidden">
-                    <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-                        <h2 className="font-display font-semibold text-text-primary">Historial de Pagos</h2>
-                        {selected.deuda > 0 && (
-                            <button onClick={() => setShowPagoModal(true)} className="text-accent text-sm font-medium hover:underline">+ Nuevo Pago</button>
-                        )}
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="bg-bg text-xs text-text-muted uppercase tracking-wider">
-                                    <th className="px-6 py-3 text-left">Fecha</th>
-                                    <th className="px-6 py-3 text-left">Tipo</th>
-                                    <th className="px-6 py-3 text-right">Monto</th>
-                                    <th className="px-6 py-3 text-left">Detalle</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border">
-                                {(selected.pagos as PagoProduccion[] | undefined)?.length === 0 || !selected.pagos ? (
-                                    <tr><td colSpan={4} className="px-6 py-6 text-center text-text-muted">No hay pagos registrados</td></tr>
-                                ) : (selected.pagos as PagoProduccion[]).map((pago) => (
-                                    <tr key={pago.id_pago} className="hover:bg-[#1F1F1F]">
-                                        <td className="px-6 py-3 text-text-muted">{new Date(pago.fecha_pago).toLocaleDateString('es-PE')}</td>
-                                        <td className="px-6 py-3"><span className={`badge ${tipoBadge[pago.tipo_pago]}`}>{pago.tipo_pago}</span></td>
-                                        <td className="px-6 py-3 text-right font-bold text-success">S/. {pago.monto.toFixed(2)}</td>
-                                        <td className="px-6 py-3 text-text-muted text-xs">{pago.detalle ?? '—'}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <AdminModal
-                    isOpen={showPagoModal}
-                    onClose={() => setShowPagoModal(false)}
-                    title="Registrar Pago"
-                    footer={
-                        <>
-                            <button onClick={() => setShowPagoModal(false)} className="btn-secondary text-sm py-2">
-                                Cancelar
-                            </button>
-                            <button onClick={handleRegisterPago} disabled={savingPago || !pagoForm.monto} className="btn-primary text-sm py-2 flex items-center gap-2">
-                                {savingPago ? <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : 'Registrar Pago'}
-                            </button>
-                        </>
-                    }
-                >
-                    <div className="bg-accent/10 border border-accent/20 rounded-[6px] p-3 text-sm">
-                        <span className="text-text-muted">Deuda Pendiente: </span>
-                        <span className="font-bold font-mono text-accent text-lg">S/. {selected.deuda.toFixed(2)}</span>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Tipo de Pago</label>
-                        <select value={pagoForm.tipo_pago} onChange={(e) => setPagoForm((f) => ({ ...f, tipo_pago: e.target.value as TipoPago }))} className="input-field">
-                            {TIPOS_PAGO.map((t) => <option key={t} value={t}>{t}</option>)}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Monto (S/.) *</label>
-                        <input type="number" min="0.01" step="0.01" value={pagoForm.monto} onChange={(e) => setPagoForm((f) => ({ ...f, monto: e.target.value }))} className="input-field" placeholder="0.00" />
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Fecha Pago</label>
-                        <input type="date" value={pagoForm.fecha_pago} onChange={(e) => setPagoForm((f) => ({ ...f, fecha_pago: e.target.value }))} className="input-field" />
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Detalle (opcional)</label>
-                        <input type="text" value={pagoForm.detalle} onChange={(e) => setPagoForm((f) => ({ ...f, detalle: e.target.value }))} className="input-field" placeholder="Transferencia BCP..." />
-                    </div>
-                </AdminModal>
-            </div>
-        )
-    }
-
-    return null
 }

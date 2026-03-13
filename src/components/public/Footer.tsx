@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom'
 import { FiInstagram, FiFacebook, FiPhone, FiMail } from 'react-icons/fi'
+import { FaTiktok } from 'react-icons/fa6'
 import { FaWhatsapp } from 'react-icons/fa'
 
 export default function Footer() {
     const whatsapp = import.meta.env.VITE_WHATSAPP_NUMBER ?? '51XXXXXXXXX'
 
     return (
-        <footer className="bg-[#0A0A0A] text-text-primary border-t-2 border-accent">
+        <footer className="bg-bg text-text-primary border-t-2 border-accent">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
                     <div>
@@ -34,6 +35,14 @@ export default function Footer() {
                                 className="w-9 h-9 border border-border rounded-[6px] flex items-center justify-center text-text-muted hover:border-accent hover:text-accent transition-colors"
                             >
                                 <FiFacebook className="w-4 h-4" />
+                            </a>
+                            <a
+                                href="https://tiktok.com"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-9 h-9 border border-border rounded-[6px] flex items-center justify-center text-text-muted hover:border-accent hover:text-accent transition-colors"
+                            >
+                                <FaTiktok className="w-4 h-4" />
                             </a>
                             <a
                                 href={`https://wa.me/${whatsapp}`}
