@@ -23,6 +23,8 @@ import Produccion from './pages/admin/Produccion'
 import Costureros from './pages/admin/Costureros'
 import Pagos from './pages/admin/Pagos'
 
+import ScrollToTop from './components/ScrollToTop'
+
 function PublicLayout() {
     return (
         <>
@@ -38,32 +40,33 @@ export default function App() {
     return (
         <CartProvider>
             <BrowserRouter>
-                <Routes>
-                    {/* Public Routes */}
-                    <Route element={<PublicLayout />}>
-                        <Route path="/" element={<Home />} />
-                        <Route path="/catalogo" element={<Catalogo />} />
-                        <Route path="/nosotros" element={<Nosotros />} />
-                    </Route>
-
-                    {/* Admin Login (unauthenticated) */}
-                    <Route path="/admin/login" element={<Login />} />
-
-                    {/* Protected Admin Routes */}
-                    <Route element={<PrivateRoute />}>
-                        <Route element={<AdminLayout />}>
-                            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-                            <Route path="/admin/dashboard" element={<Dashboard />} />
-                            <Route path="/admin/modelos" element={<Modelos />} />
-                            <Route path="/admin/produccion" element={<Produccion />} />
-                            <Route path="/admin/costureros" element={<Costureros />} />
-                            <Route path="/admin/pagos" element={<Pagos />} />
+                <ScrollToTop />
+                    <Routes>
+                        {/* Public Routes */}
+                        <Route element={<PublicLayout />}>
+                            <Route path="/" element={<Home />} />
+                            <Route path="/catalogo" element={<Catalogo />} />
+                            <Route path="/nosotros" element={<Nosotros />} />
                         </Route>
-                    </Route>
 
-                    {/* Fallback */}
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
+                        {/* Admin Login (unauthenticated) */}
+                        <Route path="/admin/login" element={<Login />} />
+
+                        {/* Protected Admin Routes */}
+                        <Route element={<PrivateRoute />}>
+                            <Route element={<AdminLayout />}>
+                                <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+                                <Route path="/admin/dashboard" element={<Dashboard />} />
+                                <Route path="/admin/modelos" element={<Modelos />} />
+                                <Route path="/admin/produccion" element={<Produccion />} />
+                                <Route path="/admin/costureros" element={<Costureros />} />
+                                <Route path="/admin/pagos" element={<Pagos />} />
+                            </Route>
+                        </Route>
+
+                        {/* Fallback */}
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
             </BrowserRouter>
         </CartProvider>
     )

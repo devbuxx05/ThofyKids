@@ -4,7 +4,6 @@ import type {
     Categoria,
     Costurero,
     Modelo,
-    PagoProduccion,
     ModeloFoto, 
     Produccion,
     ProduccionConDeuda,
@@ -22,7 +21,7 @@ export function useCategorias() {
         supabase
             .from('categoria')
             .select('*')
-            .order('id_talla')
+            .order('nombre')   // ← corregido
             .then(({ data, error }) => {
                 if (error) setError(error.message)
                 else setData(data ?? [])
